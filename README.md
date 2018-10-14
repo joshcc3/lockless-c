@@ -1,4 +1,39 @@
 # Atomic Snapshots
+
+## Intel IA 32-64 notes on atomicity
+Reference: https://software.intel.com/sites/default/files/managed/39/c5/325462-sdm-vol-1-2abcd-3abcd.pdf
+Chapter 8:
+```The processor uses three interdependent mechanisms for carrying out locked atomic operations:
+• Guaranteed atomic operations
+• Bus locking, using the LOCK# signal and the LOCK instruction prefix
+8-2 Vol. 3A
+MULTIPLE-PROCESSOR MANAGEMENT
+• Cache coherency protocols that ensure that atomic operations can be carried out on cached data structures
+(cache lock)```
+
+```
+The Intel486 processor (and newer processors since) guarantees that the following basic memory operations will
+always be carried out atomically:
+• Reading or writing a byte
+• Reading or writing a word aligned on a 16-bit boundary
+• Reading or writing a doubleword aligned on a 32-bit boundary
+The Pentium processor (and newer processors since) guarantees that the following additional memory operations
+will always be carried out atomically:
+• Reading or writing a quadword aligned on a 64-bit boundary
+• 16-bit accesses to uncached memory locations that fit within a 32-bit data bus
+The P6 family processors (and newer processors since) guarantee that the following additional memory operation
+will always be carried out atomically:
+• Unaligned 16-, 32-, and 64-bit accesses to cached memory that fit within a cache line```
+
+http://cbloomrants.blogspot.com/2014/11/11-11-14-x64-movdqa-atomic-test.html
+
+It also provides 128 bit registers for dealing with packed integers in SSE2.
+GCC exposes operations on these via intrinsics.
+
+
+
+
+
 ## Wait free
 An algorithm is wait free if every individual thread finishes in a bounded number of steps no matter what other threads do. (e.g. another thread could behave adversarily or simply block).
 
@@ -911,6 +946,11 @@ If t1 and t2 constently perform the update right after each other they will neve
 
 Different compiler/processor optimizations: caching, instruction pre-fecthing, branch prediction, instruction re-ordering.
 
+# Dev in C
+
+First write a test to see what you expect the interface to look like.
+Then write out the functions that describe the behaviour. Then write out the tests.
+Then think out the pre and post conditions.
 
 # Makefiles
 Variables are specified as <key> := <value>. The convention is to use capitals for keys.
@@ -944,3 +984,5 @@ test/stg/target/main3: test/stg/target/stg/plus_int/code.o test/stg/target/stg/p
 ```
 
 All top level lines need to end with a `:`. (including phone decls.)
+
+
