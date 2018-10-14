@@ -1,3 +1,29 @@
+# Atomic Snapshots
+## Wait free
+An algorithm is wait free if every individual thread finishes in a bounded number of steps no matter what other threads do. (e.g. another thread could behave adversarily or simply block).
+
+References are this papers  http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.406.4248&rep=rep1&type=pdf and http://www.cs.yale.edu/homes/aspnes/pinewiki/AtomicSnapshots.html#The_Gang_of_Six_algorithm
+The problem is to have a wait free algorithm for atomic snapshots in a single writer multi-reader setup (the global state is a vector of values, each thread is the single writer for its values and other threads can read everyone elses values). A snapshot is an instance of the global state and it is atomic in that any snapshot returned refers to a set of values that actually existed simultaneously at some point in time (as opposed to composed from incomplete reads of multiple states). Snapshots so produced by an algorithm are linearizable - i.e. they form a total order on time rather than a partial order). Creating an algorithm that is not wait-free is trivial - you maintain reader-writer locks around the individual values of global state, however writers that block indefinitely would cause readers to starve.
+
+### O(n^2) snapshots with unbounded Registers
+Every thread should attach a unique seq. no. to its values. When readers see that the global state has not changed between two observations they can conclude that that represents an atomic snapshot. This is still not-wait free because busy writers can starve readers. The next thing is to force writers to perform a snapshot every time they must write a value and attach that snapshot to the value that they write.
+The local state of a thread is now a `register` that contains its `value, seq. no. and snapshot`.
+The snapshot operation can now succeed in two cases:
+ - a double collect (two identical snapshot observations)
+ - `s3` when a thread observes a sequence of 3 distinct values s1, s2, s3 from the same process.
+This is wait free and a snapshot operation will terminate after 'n + 1' collects. This is because in order to prevent case (a) from being satisfied, a new value must be supplied at least every collect but each writer can provide only a single new value for otherwise case (2) is hit (s1 is the initial collect observation), there in the worst case there is the: initial collect + n - 1 collects + duplicate collect.
+A collect operation involves examining the sequence nos. for each thread and takes 'n' steps so a snapshot takes O(n^2) in the worst case.
+
+We also need to argue that this is atomic: they are is that new snapshots are only produced on double collects which are atomic. Otherwise we reuse old snapshots which by induction are atomic.
+In practice writers will wait until they observe a double collect.
+
+
+
+
+#### Questions
+Does this work when all of them are talking about the same object (does it give a consistent picture)
+
+
 # Threading interface
 ## PThread Interface
 The type pthread_t is opaque - its an 8 byte identifier that is used internally. pthread_mutex_t and pthread_cond_t on ther other hand have the following properties:
@@ -885,27 +911,36 @@ If t1 and t2 constently perform the update right after each other they will neve
 
 Different compiler/processor optimizations: caching, instruction pre-fecthing, branch prediction, instruction re-ordering.
 
-# TODO
- - One of the issues of using these refs to pass pointers is that you no longer have types which sucks. Maybe create a macro that takes the name of the ref, the name of the value and the type of the value and casts creates a new ref, gets the value and casts the ref to the value. Alternatively for the longer route - dont think you really need this - I think there is a way to automatically generate definitions and the corresponding bindings functions for a ref of a new type using macros but haven't investigated yet. For e.g., you'd hava ref_int, ref_hash_map etc.
-
- - Improve the implementation of hash maps w.r.t the rebalancing and calculation of rebalancing by using bit shift operators.
- - We track the local bindings in a hashmap which we pass around (as a pointer) instead of pushing them onto the stack (as is suggested in the paper). The garbage collector would use the layout in the info table to find out about the state of the heap. One (in retrospect stupid reason) was that I wanted to declare a case_frame struct (and you can't fit a variable sized list of free variables into a struct)
- - The pointer table keeps growing - is there a way to shrink it? (considering other stuff holds references into it you can't really move elements around. Check if it's possible to free interior portions of a malloced structure.
- - Todo, create an abstraction in front of our pointer table that allows us to interact with the pointers better - I think I'm actually implementing references here.
- - There is no need to have local bindings - just index straight into the pointer table.
- - It seems like C doesn't perform tail call optimization
 
 # Makefiles
 Variables are specified as <key> := <value>. The convention is to use capitals for keys.
 You refer to variables with $(<key>)
 
-The usualy layout is to have an all target and a clean target at least. clean is marked as .PHONY to note that there is nothing generated. The generated files go into a target directory whose internal dir structure matches the source dir structure.
-
+The usualy layout is to have an all target and a clean target at least. clean is marked as .PHONY to note that there is nothing generated (line above the target `.PHONY clean:`). The generated files go into a target directory whose internal dir structure matches the source dir structure.
+The actions of the rule must start with a `tab`.
+A rule consists of a: (the deps are other targets)
+<target>: <deps>
+<tab>shell commands
+The dependencies must either be an existing target or an existing file.
 An example rule to compile a .o files from the corresponding .c file. The % denote variables that are captured in rule local variables.
 The targets are captured in $@ and the dependency in $^. There are more variables and funnier ways of using them.
-
+Apparently the `%` only works to match against an individual file line and cannot match against an arbitrary path so you can only glob files in a dir?
+The `-c` flag just compiles into an '.o' or '.s' but does not link otherwise it tries to create an executable. The `-I` flag only specifies where to look for header files. You need to give the absolute path to all the files needed for compilation. You can get environment variables with ${env_name}.
 ```
 test/stg/target/stg/plus_int/%.o: src/stg/plus_int/%.c
 	mkdir -p test/stg/target/stg/plus_int
 	$(GCC_CMD) $^ -c -o $@
 ```
+For the main executable you would have the exec name followed by the object file deps.
+```
+test/stg/target/main3: test/stg/target/stg/plus_int/code.o test/stg/target/stg/plus_int/stack.o test/stg/target/stg/plus_int/static.o test/stg/target/stg/list/list.o \
+        test/stg/target/stg/heap.o \
+		test/data/target/data/string_.o test/containers/target/containers/mmanager.o test/containers/target/containers/arraylist.o\
+		     test/stg/target/stg/math.o test/stg/target/stg/bindings.o test/target/typeclasses.o test/stg/target/stg/util.o test/containers/target/containers/llist.o\
+		   test/containers/target/containers/hash_set.o test/containers/target/containers/resizable_array.o test/containers/target/containers/hash_map.o \
+           test/stg/target/stg/main3.o
+	$(GCC_CMD) -I . $^ -o $@
+
+```
+
+All top level lines need to end with a `:`. (including phone decls.)
