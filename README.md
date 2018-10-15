@@ -30,6 +30,15 @@ http://cbloomrants.blogspot.com/2014/11/11-11-14-x64-movdqa-atomic-test.html
 It also provides 128 bit registers for dealing with packed integers in SSE2.
 GCC exposes operations on these via intrinsics.
 
+Writing to a 128 bit int with one bit set from different threads each writing the int with a different int set gives the following count. (the threads dont wait for the others to start)
+
+With 100000000 iterations and 128 threads.
+Count: 0 - 16543031 (95.846093), 1 - 22803 (0.132115), 2 - 694182 (4.021914)
+
+With 10000000 iteratiosn and 1024 threads
+Count: 0 - 2726432 (52.052363), 1 - 967881 (18.478544), 2 - 1543551 (29.469093)
+
+With 100000000 iterations and 128 threads and synchronizing the startup of the threads:
 
 
 

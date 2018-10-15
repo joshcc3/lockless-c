@@ -49,7 +49,7 @@ void monitor_init(bool (*c)(void*), monitor_t **m, void*extra)
 
 
 #define ITERATIONS 1000000
-#define NUM_THREADS 512
+#define NUM_THREADS 1024
 __int128_t shared = 3;
 int err_count = 0;
 bool started = false;
@@ -60,33 +60,44 @@ void log_err(__int128_t tmp, int iter)
   printf("More than 2 bits were set in 0x%x%x%x%x on iteration %d\n", tmp_[3], tmp_[2], tmp_[1], tmp_[0], iter);
 }
 long bitcount[4];
-void* checker(void* all_done)
-{
-  
-  while(!started);
 
+struct waiter_checker_args {
+  bool *all_done;
+  monitor_t *m;
+  int* count;
+};
+void* waiting_checker(void* args_)
+{
+  struct waiter_checker_args* args = (struct waiter_checker_args*) args_;
+  pthread_mutex_lock(&(args->m->lock));
+  while(*(args->count) < NUM_THREADS)
+    {
+      printf("About to sleep\n");
+      pthread_cond_wait(&(args->m->condition), &(args->m->lock));
+    }
+  pthread_mutex_unlock(&(args->m->lock));
+  
   printf("CHECKER: Started\n");
   __int128_t tmp = shared;
-  //int *v = (int *)&tmp;
-  for(int i = 0; !*(bool*)all_done; i++)
+  for(int i = 0; !*(args->all_done); i++)
     {
-      //      unsigned long long* shared_ = (unsigned long long*)&shared;
-      //unsigned long long* tmp_ = (unsigned long long*)&tmp;
-      //if(shared != tmp) printf("CHECKER: shared changing from %llu - %llu  ->  %llu - %llu\n", shared_[1], shared_[0], tmp_[1], tmp_[0]);
       tmp = shared;
       bitcount[__builtin_popcount(tmp)]++;
-      //== 0) printf("ERR: %d\n", __builtin_popcount(tmp));
-	//log_err(tmp, i);
     }
 }
 
+void* checker(void* all_done)
+{
+  printf("CHECKER: Started\n");
+  __int128_t tmp = shared;
+  for(int i = 0; !*(bool*)all_done; i++)
+    {
+      tmp = shared;
+      bitcount[__builtin_popcount(tmp)]++;
 
+    }
+}
 
-
-typedef struct worker_args {
-  int toggleBits[2];
-  monitor_t monitor;
-}worker_args;
 
 void* worker(void* arg)
 {
@@ -100,10 +111,46 @@ void* worker(void* arg)
       shared = val;
     }
 
-  printf("Thread-%d completed\n", toggleBits[0]);
+  //printf("Thread-%d completed\n", toggleBits[0]);
 
 }
 
+struct waiting_worker_args {
+  monitor_t *m;
+  int bit;
+  int *count;
+};
+void* waiting_worker(void* arg_)
+{
+  struct waiting_worker_args *arg = (struct waiting_worker_args *)arg_;
+  
+  __int128_t val = 1;
+  val = val << arg->bit;
+
+  pthread_mutex_lock(&(arg->m->lock));
+  *(arg->count) += 1;
+  if(*(arg->count) == NUM_THREADS)
+    {
+      printf("Waking everyone up.\n");
+      pthread_cond_broadcast(&(arg->m->condition));
+    }
+
+  else while(*(arg->count) < NUM_THREADS)
+	 {
+	   printf("Waiting, only %d are activated.\n", *(arg->count));
+	   pthread_cond_wait(&(arg->m->condition), &(arg->m->lock));
+	 }
+  pthread_mutex_unlock(&(arg->m->lock));
+
+  for(int i = 0; i < ITERATIONS; i++)
+    {
+      shared = val;
+    }
+
+  printf("Thread-%d completed\n", arg->bit);
+}
+
+bool noop(void* null) { return true; }
 
 int main()
 {
@@ -113,20 +160,26 @@ int main()
     A check thread continusouly reads from the value and reports if it ever sees
     a state where more than 1 bit is 1.
    */
+  int count = 0;
+  monitor_t *m;
+  monitor_init(noop, &m, NULL);
+
   bool all_done = false;
   pthread_t checker_t;
-  pthread_create(&checker_t, NULL, checker, (void*)&all_done);
+  struct waiter_checker_args checker_args = (struct waiter_checker_args){ .all_done = &all_done, .m = m, .count = &count };
+  pthread_create(&checker_t, NULL, waiting_checker, (void*)&checker_args);
   printf("MAIN: Started my checker thread\n");
-  int args[NUM_THREADS];
+  struct waiting_worker_args args[NUM_THREADS];
   pthread_t tids[NUM_THREADS];
   for(int i = 0; i < NUM_THREADS; i++)
     {
-      args[i] = i%128;
-      pthread_create(tids + i, NULL, worker, (void*)(args + i));
+      args[i] = (struct waiting_worker_args) { .count = &count, .bit = i%128, .m = m};
+      pthread_create(tids + i, NULL, waiting_worker, (void*)(args + i));
       started = true;
     }
   for(int i = 0; i < NUM_THREADS; i++) pthread_join(tids[i], NULL);
-  printf("Count: 0 - %ld, 1 - %ld, 2 - %ld, 3 - %ld\n", bitcount[0], bitcount[1], bitcount[2], bitcount[3]);
+  double sum = (double)bitcount[0] + bitcount[1] + bitcount[2];
+  printf("Count: 0 - %ld (%f), 1 - %ld (%f), 2 - %ld (%f)\n", bitcount[0], bitcount[0]/sum * 100, bitcount[1], bitcount[1]/sum * 100, bitcount[2], bitcount[2]/sum * 100);
   all_done = true;
   pthread_exit(NULL);
 
