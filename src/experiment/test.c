@@ -13,14 +13,6 @@ typedef struct monitor {
   void*extra;
 } monitor_t;
 
-
-
-#define ITERATIONS 1000000
-
-#define NUM_THREADS 10000
-
-__int128_t shared;
-
 void monitor_notify(monitor_t *m) { pthread_cond_signal(&m->condition); }
 
 void monitor_broadcast(monitor_t *m) { pthread_cond_broadcast(&m->condition); }
@@ -56,28 +48,35 @@ void monitor_init(bool (*c)(void*), monitor_t **m, void*extra)
 }
 
 
-
+#define ITERATIONS 1000000
+#define NUM_THREADS 512
+__int128_t shared = 3;
 int err_count = 0;
-
+bool started = false;
 void log_err(__int128_t tmp, int iter)
 {
   err_count++;
-  unsigned long long *tmp_ = (unsigned long long *)&tmp;
-  printf("More than 2 bits were set in 0x%llu%llu on iteration %d\n", tmp_[0], tmp_[1], iter);
+  unsigned int *tmp_ = (unsigned int *)&tmp;
+  printf("More than 2 bits were set in 0x%x%x%x%x on iteration %d\n", tmp_[3], tmp_[2], tmp_[1], tmp_[0], iter);
 }
-
+long bitcount[4];
 void* checker(void* all_done)
 {
   
-  printf("CHECKER: Started\n");
+  while(!started);
 
-  for(int i = 0; i < !*(bool*)all_done; i++)
+  printf("CHECKER: Started\n");
+  __int128_t tmp = shared;
+  //int *v = (int *)&tmp;
+  for(int i = 0; !*(bool*)all_done; i++)
     {
-      __int128_t tmp = shared;
-      if(__builtin_popcount(tmp) > 2)
-	{
-	  log_err(tmp, i);
-	}
+      //      unsigned long long* shared_ = (unsigned long long*)&shared;
+      //unsigned long long* tmp_ = (unsigned long long*)&tmp;
+      //if(shared != tmp) printf("CHECKER: shared changing from %llu - %llu  ->  %llu - %llu\n", shared_[1], shared_[0], tmp_[1], tmp_[0]);
+      tmp = shared;
+      bitcount[__builtin_popcount(tmp)]++;
+      //== 0) printf("ERR: %d\n", __builtin_popcount(tmp));
+	//log_err(tmp, i);
     }
 }
 
@@ -88,22 +87,21 @@ typedef struct worker_args {
   int toggleBits[2];
   monitor_t monitor;
 }worker_args;
+
 void* worker(void* arg)
 {
   //  struct timespec sleep_time;
   int *toggleBits = (int*)arg;
   //printf("[%d, %d] Thread created\n", toggleBits[0], toggleBits[1]);
-  __int128_t one = 1;
-  __int128_t b1 = one << toggleBits[0];
-  __int128_t b2 = one << toggleBits[1];
-  __int128_t vals[4] = {b1, b2, b1 + b2, 0};
-
-  //printf("Thread-%d: Starting thread\n", (int)(sqrt(toggleBits[0]*128 + toggleBits[1])));
-
+  __int128_t val = 1;
+  val = val << *toggleBits;
   for(int i = 0; i < ITERATIONS; i++)
     {
-      shared = vals[i%4];
+      shared = val;
     }
+
+  printf("Thread-%d completed\n", toggleBits[0]);
+
 }
 
 
@@ -119,16 +117,16 @@ int main()
   pthread_t checker_t;
   pthread_create(&checker_t, NULL, checker, (void*)&all_done);
   printf("MAIN: Started my checker thread\n");
-  int args[NUM_THREADS][2];
+  int args[NUM_THREADS];
   pthread_t tids[NUM_THREADS];
   for(int i = 0; i < NUM_THREADS; i++)
     {
-      args[i][0] = ((i*i)%(128*128))/128;
-      args[i][1] = ((i*i)%(128*128))%128;
-      //printf("MAIN: Created child %d\n", i);
-      pthread_create(tids + i, NULL, worker, (void*)args[i]);
+      args[i] = i%128;
+      pthread_create(tids + i, NULL, worker, (void*)(args + i));
+      started = true;
     }
   for(int i = 0; i < NUM_THREADS; i++) pthread_join(tids[i], NULL);
+  printf("Count: 0 - %ld, 1 - %ld, 2 - %ld, 3 - %ld\n", bitcount[0], bitcount[1], bitcount[2], bitcount[3]);
   all_done = true;
   pthread_exit(NULL);
 
