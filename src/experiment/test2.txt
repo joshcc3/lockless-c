@@ -1,0 +1,8 @@
+(Starting State: 1, Iterations: 1000000, Num threads: 512) - Count: 0 - 0 (0.000000), 1 - 3640421 (99.999945), 2 - 2 (0.000055)
+(Starting State: 1, Iterations: 1000000, Num threads: 512) - Count: 0 - 2 (0.000040), 1 - 5026707 (99.999881), 2 - 4 (0.000080)
+(Starting State: 1, Iterations: 1000000, Num threads: 512) - Count: 0 - 0 (0.000000), 1 - 2072816 (99.999855), 2 - 3 (0.000145)
+(Starting State: 1, Iterations: 1000000, Num threads: 512) - Count: 0 - 0 (0.000000), 1 - 2170970 (99.999954), 2 - 1 (0.000046)
+(Starting State: 1, Iterations: 1000000, Num threads: 512) - Count: 0 - 1 (0.000035), 1 - 2837447 (99.999930), 2 - 1 (0.000035)
+(Starting State: 1, Iterations: 1000000, Num threads: 512) - Count: 0 - 2 (0.000132), 1 - 1512491 (100.000000), 2 - 0 (0.000000)
+(Starting State: 1, Iterations: 1000000, Num threads: 512) - Count: 0 - 3 (0.000142), 1 - 2113311 (99.999763), 2 - 2 (0.000095)
+(Starting State: 1, Iterations: 1000000, Num threads: 512) - Count: 0 - 2 (0.000152), 1 - 1316711 (99.999772), 2 - 1 (0.000076)
