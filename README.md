@@ -32,14 +32,42 @@ GCC exposes operations on these via intrinsics.
 
 Writing to a 128 bit int with one bit set from different threads each writing the int with a different int set gives the following count. (the threads dont wait for the others to start)
 
-With 100000000 iterations and 128 threads.
-Count: 0 - 16543031 (95.846093), 1 - 22803 (0.132115), 2 - 694182 (4.021914)
+I did some analysis on all possible interleavings of two thread writers and a checker and got the following results:
 
-With 10000000 iteratiosn and 1024 threads
-Count: 0 - 2726432 (52.052363), 1 - 967881 (18.478544), 2 - 1543551 (29.469093)
+Starting state: (One, Zero)
+fromList [((One,One),709632),((One,Zero),451584),((Zero,One),1032192),((Zero,Zero),709632)]
 
-With 100000000 iterations and 128 threads and synchronizing the startup of the threads:
+Starting state: (Zero, One)
+fromList [((One,One),709632),((One,Zero),1032192),((Zero,One),451584),((Zero,Zero),709632)]
 
+Starting state: (Zero, Zero)
+fromList [((One,One),451584),((One,Zero),709632),((Zero,One),709632),((Zero,Zero),1032192)]
+
+Starting state: (One, One)
+fromList [((One,One),1032192),((One,Zero),709632),((Zero,One),709632),((Zero,Zero),451584)]
+
+So given an initial state (x, y)
+-> (x, y) = 35.5%
+-> (x, not y) & (not x, y) = 24.4 (48.8%)
+-> (not x, not y) = 15.55%
+
+Looking at the actual results:
+
+Test1: Lock around reads and writes
+[jcoutin@loydjcoutin1 experiment]$ ./a.out
+```
+MAIN: Started my checker thread
+Waking everyone up.
+CHECKER: Started
+(Iterations: 1000000, Num threads: 128) - Count: 0 - 0 (0.000000), 1 - 840562 (100.000238), 2 - 0 (0.000000)
+```
+This gives us what we expect - atomic reads and writes give us always just 1 bit.
+
+
+All threads start synchronously using a monitor lock:
+Test2: No lock,  [100000, 10000000, 100000000] iterations and [128, 256, 512, 1024] threads
+(starting state: 1, iterations: 1000000, num threads: 128): run over 100 iterations, gives around 0.00001% chance of detecting a non-atomic write
+(either 0 or 2 bits set).
 
 
 
@@ -60,7 +88,6 @@ A collect operation involves examining the sequence nos. for each thread and tak
 
 We also need to argue that this is atomic: they are is that new snapshots are only produced on double collects which are atomic. Otherwise we reuse old snapshots which by induction are atomic.
 In practice writers will wait until they observe a double collect.
-
 
 
 
@@ -995,3 +1022,12 @@ test/stg/target/main3: test/stg/target/stg/plus_int/code.o test/stg/target/stg/p
 All top level lines need to end with a `:`. (including phone decls.)
 
 
+# Oh, No!
+## __builtin_popcount only works for up to 32 bits and doesn't actually work on 64/128 bits
+## I crashed ghc :/
+*Main> aggregate $ map (processState oneZero) possibleOutcomes
+fromList [((One,One),709632),((One,Zero),1032192),((Zero,One),451584),((Zero,Zero),709632)]
+*Main>
+ghc.exe: panic! (the 'impossible' happened)
+  (GHC version 8.0.2 for x86_64-unknown-mingw32):
+        thread blocked indefinitely in an MVar operation
