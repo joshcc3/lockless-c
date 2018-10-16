@@ -47,12 +47,12 @@ void monitor_init(bool (*c)(void*), monitor_t **m, void*extra)
   assert(*m != NULL);
 }
 
+//pthread_mutex_t shared_lock;
 
 #define ITERATIONS 1000000
-#define NUM_THREADS 1024
-__int128_t shared = 3;
+#define NUM_THREADS 512
+__int128_t shared_128_int = 1;
 int err_count = 0;
-bool started = false;
 void log_err(__int128_t tmp, int iter)
 {
   err_count++;
@@ -63,62 +63,28 @@ long bitcount[4];
 
 struct waiter_checker_args {
   bool *all_done;
-  monitor_t *m;
-  int* count;
+  bool *started;
 };
 void* waiting_checker(void* args_)
 {
-  struct waiter_checker_args* args = (struct waiter_checker_args*) args_;
-  pthread_mutex_lock(&(args->m->lock));
-  while(*(args->count) < NUM_THREADS)
-    {
-      printf("About to sleep\n");
-      pthread_cond_wait(&(args->m->condition), &(args->m->lock));
-    }
-  pthread_mutex_unlock(&(args->m->lock));
-  
-  printf("CHECKER: Started\n");
-  __int128_t tmp = shared;
+  struct waiter_checker_args *args = (struct waiter_checker_args *)args_;
+  while(!*(args->started));
+  //printf("CHECKER: Started\n");
   for(int i = 0; !*(args->all_done); i++)
-    {
-      tmp = shared;
-      bitcount[__builtin_popcount(tmp)]++;
-    }
-}
-
-void* checker(void* all_done)
-{
-  printf("CHECKER: Started\n");
-  __int128_t tmp = shared;
-  for(int i = 0; !*(bool*)all_done; i++)
-    {
-      tmp = shared;
-      bitcount[__builtin_popcount(tmp)]++;
-
-    }
-}
-
-
-void* worker(void* arg)
-{
-  //  struct timespec sleep_time;
-  int *toggleBits = (int*)arg;
-  //printf("[%d, %d] Thread created\n", toggleBits[0], toggleBits[1]);
-  __int128_t val = 1;
-  val = val << *toggleBits;
-  for(int i = 0; i < ITERATIONS; i++)
-    {
-      shared = val;
-    }
-
-  //printf("Thread-%d completed\n", toggleBits[0]);
-
+  {
+    //pthread_mutex_lock(&shared_lock);
+     __int128_t tmp = shared_128_int;
+     //pthread_mutex_unlock(&shared_lock);
+     int* tmp_ = (int*)&tmp;
+     bitcount[__builtin_popcount(tmp_[0]) + __builtin_popcount(tmp_[1]) + __builtin_popcount(tmp_[2]) + __builtin_popcount(tmp_[3])]++;
+  }
 }
 
 struct waiting_worker_args {
   monitor_t *m;
   int bit;
   int *count;
+  bool *started;
 };
 void* waiting_worker(void* arg_)
 {
@@ -131,23 +97,29 @@ void* waiting_worker(void* arg_)
   *(arg->count) += 1;
   if(*(arg->count) == NUM_THREADS)
     {
-      printf("Waking everyone up.\n");
+      sleep(1);
+      //printf("Waking everyone up.\n");
       pthread_cond_broadcast(&(arg->m->condition));
     }
 
   else while(*(arg->count) < NUM_THREADS)
 	 {
-	   printf("Waiting, only %d are activated.\n", *(arg->count));
+	   //printf("Waiting, only %d are activated.\n", *(arg->count));
 	   pthread_cond_wait(&(arg->m->condition), &(arg->m->lock));
 	 }
   pthread_mutex_unlock(&(arg->m->lock));
 
+  //printf("Thread-%d started\n", arg->bit);
+
   for(int i = 0; i < ITERATIONS; i++)
     {
-      shared = val;
+      //pthread_mutex_lock(&shared_lock);
+      shared_128_int = val;
+      //pthread_mutex_unlock(&shared_lock);
+      *(arg->started) = true;
     }
 
-  printf("Thread-%d completed\n", arg->bit);
+  //printf("Thread-%d completed\n", arg->bit);
 }
 
 bool noop(void* null) { return true; }
@@ -160,26 +132,29 @@ int main()
     A check thread continusouly reads from the value and reports if it ever sees
     a state where more than 1 bit is 1.
    */
+
+  //pthread_mutex_init(&shared_lock, NULL);
+  int starting_state = (int)shared_128_int;
   int count = 0;
   monitor_t *m;
   monitor_init(noop, &m, NULL);
 
+  bool started = false;
   bool all_done = false;
   pthread_t checker_t;
-  struct waiter_checker_args checker_args = (struct waiter_checker_args){ .all_done = &all_done, .m = m, .count = &count };
+  struct waiter_checker_args checker_args = (struct waiter_checker_args){ .all_done = &all_done, .started = &started };
   pthread_create(&checker_t, NULL, waiting_checker, (void*)&checker_args);
-  printf("MAIN: Started my checker thread\n");
+  //printf("MAIN: Started my checker thread\n");
   struct waiting_worker_args args[NUM_THREADS];
   pthread_t tids[NUM_THREADS];
   for(int i = 0; i < NUM_THREADS; i++)
     {
-      args[i] = (struct waiting_worker_args) { .count = &count, .bit = i%128, .m = m};
+      args[i] = (struct waiting_worker_args) { .count = &count, .bit = i%128, .m = m, .started = &started };
       pthread_create(tids + i, NULL, waiting_worker, (void*)(args + i));
-      started = true;
     }
   for(int i = 0; i < NUM_THREADS; i++) pthread_join(tids[i], NULL);
   double sum = (double)bitcount[0] + bitcount[1] + bitcount[2];
-  printf("Count: 0 - %ld (%f), 1 - %ld (%f), 2 - %ld (%f)\n", bitcount[0], bitcount[0]/sum * 100, bitcount[1], bitcount[1]/sum * 100, bitcount[2], bitcount[2]/sum * 100);
+  printf("(Starting State: %d, Iterations: %d, Num threads: %d) - Count: 0 - %ld (%f), 1 - %ld (%f), 2 - %ld (%f)\n", starting_state, ITERATIONS, NUM_THREADS, bitcount[0], bitcount[0]/sum * 100, bitcount[1], bitcount[1]/sum * 100, bitcount[2], bitcount[2]/sum * 100);
   all_done = true;
   pthread_exit(NULL);
 
