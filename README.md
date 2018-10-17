@@ -71,6 +71,17 @@ Test2: No lock,  [100000, 10000000, 100000000] iterations and [128, 256, 512, 10
 
 There are about 60 instructions in the loop.
 
+When locking the value for reading, the distribution of 0s - 1s looks very accurate (only 1 bit is set in a byte out of 4).
+(Starting State: 1, Iterations: 1000000, Num threads: 128) - Count: 0 - 0 (0.000000), 1 - 46 (100.000000), 2 - 0 (0.000000)
+(
+Num 0s, Num 1s, pc 0s, pc 1s)
+[Byte 0] (35, 11, 76.086957, 23.913043)
+[Byte 1] (36, 10, 78.260870, 21.739130)
+[Byte 2] (34, 12, 73.913043, 26.086957)
+[Byte 3] (33, 13, 71.739130, 28.260870)
+
+
+
 
 ## Wait free
 An algorithm is wait free if every individual thread finishes in a bounded number of steps no matter what other threads do. (e.g. another thread could behave adversarily or simply block).

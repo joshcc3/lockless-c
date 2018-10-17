@@ -6,6 +6,11 @@
 #include <math.h>
 #include <time.h>
 
+int randInRange(int n)
+{
+  return (int)(((double)rand()/RAND_MAX)*(n + 1));
+}
+
 // The monitor closure
 typedef struct monitor {
   pthread_mutex_t lock;
@@ -48,9 +53,9 @@ void monitor_init(bool (*c)(void*), monitor_t **m, void*extra)
   assert(*m != NULL);
 }
 
-pthread_mutex_t shared_lock;
+//pthread_mutex_t shared_lock;
 
-#define ITERATIONS 1000000
+#define ITERATIONS 5000000
 #define NUM_THREADS 128
 __int128_t shared_128_int = 1;
 int err_count = 0;
@@ -83,9 +88,9 @@ void* waiting_checker(void* args_)
 
   for(int i = 0; !*(args->all_done); i++)
   {
-    pthread_mutex_lock(&shared_lock);
+    // pthread_mutex_lock(&shared_lock);
      __int128_t tmp = shared_128_int;
-     pthread_mutex_unlock(&shared_lock);
+     //pthread_mutex_unlock(&shared_lock);
      int* tmp_ = (int*)&tmp;
      bitcount[__builtin_popcount(tmp_[0]) + __builtin_popcount(tmp_[1]) + __builtin_popcount(tmp_[2]) + __builtin_popcount(tmp_[3])]++;
 
@@ -93,7 +98,7 @@ void* waiting_checker(void* args_)
      bitcount_bytes[1][__builtin_popcount(tmp_[1])]++;
      bitcount_bytes[2][__builtin_popcount(tmp_[2])]++;
      bitcount_bytes[3][__builtin_popcount(tmp_[3])]++;
-     int sleeping_for =  (int)((double)rand()/RAND_MAX * 10000000 + 1000);
+     int sleeping_for =  (int)((double)rand()/RAND_MAX * 1000 + 100);
      //printf("Sleeping for %dns\n", sleeping_for);
      struct timespec tm = (struct timespec){ .tv_sec = 0, .tv_nsec = sleeping_for };
      nanosleep(&tm, NULL);
@@ -112,18 +117,25 @@ void* waiting_worker(void* arg_)
 {
   struct waiting_worker_args *arg = (struct waiting_worker_args *)arg_;
   
-  __int128_t val = 1;
-  val = val << arg->bit;
 
 
   for(int i = 0; i < ITERATIONS; i++)
     {
-      if(i == 1)
-	printf("Thread-%d started\n", arg->bit);
+      if(i == 5000)
+	{
+	  printf("Thread-%d started\n", arg->bit);
+	  *(arg->started) = true;
 
-      pthread_mutex_lock(&shared_lock);
+	}
+
+      //      pthread_mutex_lock(&shared_lock);
+      int byteNum1 = randInRange(3);
+      int byteNum2 = randInRange(3);      
+
+      __int128_t tmp = 1;
+      __int128_t val = (tmp << (8*byteNum1)) + (tmp << (8*byteNum2));
       shared_128_int = val;
-      pthread_mutex_unlock(&shared_lock);
+      //pthread_mutex_unlock(&shared_lock);
       if(i == 0)
 	{
 	  pthread_mutex_lock(&(arg->m->lock));
@@ -141,7 +153,6 @@ void* waiting_worker(void* arg_)
 		 }
 	  pthread_mutex_unlock(&(arg->m->lock));
 
-	  *(arg->started) = true;
 	}
     }
   *(arg->all_done) = true;
