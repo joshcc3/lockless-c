@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <pthread.h>
 #include <math.h>
+#include <time.h>
 
 // The monitor closure
 typedef struct monitor {
@@ -50,7 +51,7 @@ void monitor_init(bool (*c)(void*), monitor_t **m, void*extra)
 //pthread_mutex_t shared_lock;
 
 #define ITERATIONS 1000000
-#define NUM_THREADS 512
+#define NUM_THREADS 128
 __int128_t shared_128_int = 1;
 int err_count = 0;
 void log_err(__int128_t tmp, int iter)
@@ -60,16 +61,21 @@ void log_err(__int128_t tmp, int iter)
   printf("More than 2 bits were set in 0x%x%x%x%x on iteration %d\n", tmp_[3], tmp_[2], tmp_[1], tmp_[0], iter);
 }
 long bitcount[4];
-
+long bitcount_bytes[4][2];
 struct waiter_checker_args {
   bool *all_done;
   bool *started;
 };
 void* waiting_checker(void* args_)
 {
+
   struct waiter_checker_args *args = (struct waiter_checker_args *)args_;
   while(!*(args->started));
-  //printf("CHECKER: Started\n");
+  printf("CHECKER: Started\n");
+  struct timespec tm = { .tv_sec = 0, .tv_nsec = 10000000 };
+  sleep(1);
+  //nanosleep(&tm, NULL);
+
   for(int i = 0; !*(args->all_done); i++)
   {
     //pthread_mutex_lock(&shared_lock);
@@ -77,6 +83,12 @@ void* waiting_checker(void* args_)
      //pthread_mutex_unlock(&shared_lock);
      int* tmp_ = (int*)&tmp;
      bitcount[__builtin_popcount(tmp_[0]) + __builtin_popcount(tmp_[1]) + __builtin_popcount(tmp_[2]) + __builtin_popcount(tmp_[3])]++;
+
+     bitcount_bytes[0][__builtin_popcount(tmp_[0])]++;
+     bitcount_bytes[1][__builtin_popcount(tmp_[1])]++;
+     bitcount_bytes[2][__builtin_popcount(tmp_[2])]++;
+     bitcount_bytes[3][__builtin_popcount(tmp_[3])]++;
+     nanosleep(&tm, NULL);
   }
 }
 
@@ -119,7 +131,8 @@ void* waiting_worker(void* arg_)
       *(arg->started) = true;
     }
 
-  //printf("Thread-%d completed\n", arg->bit);
+  printf("-");
+  //  printf("Thread-%d completed\n", arg->bit);
 }
 
 bool noop(void* null) { return true; }
@@ -153,9 +166,16 @@ int main()
       pthread_create(tids + i, NULL, waiting_worker, (void*)(args + i));
     }
   for(int i = 0; i < NUM_THREADS; i++) pthread_join(tids[i], NULL);
+  all_done = true;
+  printf("\nAll done.\n");
   double sum = (double)bitcount[0] + bitcount[1] + bitcount[2];
   printf("(Starting State: %d, Iterations: %d, Num threads: %d) - Count: 0 - %ld (%f), 1 - %ld (%f), 2 - %ld (%f)\n", starting_state, ITERATIONS, NUM_THREADS, bitcount[0], bitcount[0]/sum * 100, bitcount[1], bitcount[1]/sum * 100, bitcount[2], bitcount[2]/sum * 100);
-  all_done = true;
+
+  double sm1 = bitcount_bytes[0][0] + bitcount_bytes[0][1];
+  double sm2 = bitcount_bytes[1][0] + bitcount_bytes[1][1];
+  double sm3 = bitcount_bytes[2][0] + bitcount_bytes[2][1];
+  double sm4 = bitcount_bytes[3][0] + bitcount_bytes[3][1];
+  printf("(\nNum 0s, Num 1s, pc 0s, pc 1s)\n[Byte 0] (%d, %d, %f, %f)\n[Byte 1] (%d, %d, %f, %f)\n[Byte 2] (%d, %d, %f, %f)\n[Byte 3] (%d, %d, %f, %f)\n", bitcount_bytes[0][0], bitcount_bytes[0][1], bitcount_bytes[0][0]*100/sm1, bitcount_bytes[0][1]*100/sm1, bitcount_bytes[1][0], bitcount_bytes[1][1], bitcount_bytes[1][0]*100/sm2, bitcount_bytes[1][1]*100/sm2, bitcount_bytes[2][0], bitcount_bytes[2][1], bitcount_bytes[2][0]*100/sm3, bitcount_bytes[2][1]*100/sm3, bitcount_bytes[3][0], bitcount_bytes[3][1], bitcount_bytes[3][0]*100/sm4, bitcount_bytes[3][1]*100/sm4);
   pthread_exit(NULL);
 
 }
