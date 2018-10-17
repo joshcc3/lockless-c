@@ -118,6 +118,9 @@ void* waiting_worker(void* arg_)
 
   for(int i = 0; i < ITERATIONS; i++)
     {
+      if(i == 1)
+	printf("Thread-%d started\n", arg->bit);
+
       pthread_mutex_lock(&shared_lock);
       shared_128_int = val;
       pthread_mutex_unlock(&shared_lock);
@@ -138,7 +141,6 @@ void* waiting_worker(void* arg_)
 		 }
 	  pthread_mutex_unlock(&(arg->m->lock));
 
-	  printf("Thread-%d started\n", arg->bit);
 	  *(arg->started) = true;
 	}
     }
