@@ -50,7 +50,7 @@ void monitor_init(bool (*c)(void*), monitor_t **m, void*extra)
 
 //pthread_mutex_t shared_lock;
 
-#define ITERATIONS 1000000
+#define ITERATIONS 100000000
 #define NUM_THREADS 128
 __int128_t shared_128_int = 1;
 int err_count = 0;
@@ -85,7 +85,9 @@ void* waiting_checker(void* args_)
      bitcount_bytes[1][__builtin_popcount(tmp_[1])]++;
      bitcount_bytes[2][__builtin_popcount(tmp_[2])]++;
      bitcount_bytes[3][__builtin_popcount(tmp_[3])]++;
+     
   }
+  printf("CHECKER: Done\n");
 }
 
 struct waiting_worker_args {
@@ -106,7 +108,6 @@ void* waiting_worker(void* arg_)
   *(arg->count) += 1;
   if(*(arg->count) == NUM_THREADS)
     {
-      sleep(1);
       //printf("Waking everyone up.\n");
       pthread_cond_broadcast(&(arg->m->condition));
     }
