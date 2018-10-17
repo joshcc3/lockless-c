@@ -81,7 +81,6 @@ void* waiting_checker(void* args_)
   while(!*(args->started));
   printf("CHECKER: Started\n");
 
-  struct timespec tm = (struct timespec){ .tv_sec = 0, .tv_nsec = 1000000 };
   for(int i = 0; !*(args->all_done); i++)
   {
     pthread_mutex_lock(&shared_lock);
@@ -94,6 +93,9 @@ void* waiting_checker(void* args_)
      bitcount_bytes[1][__builtin_popcount(tmp_[1])]++;
      bitcount_bytes[2][__builtin_popcount(tmp_[2])]++;
      bitcount_bytes[3][__builtin_popcount(tmp_[3])]++;
+     int sleeping_for =  (int)((double)rand()/RAND_MAX * 10000000 + 1000);
+     //printf("Sleeping for %dns\n", sleeping_for);
+     struct timespec tm = (struct timespec){ .tv_sec = 0, .tv_nsec = sleeping_for };
      nanosleep(&tm, NULL);
   }
   printf("CHECKER: Done\n");
@@ -113,32 +115,35 @@ void* waiting_worker(void* arg_)
   __int128_t val = 1;
   val = val << arg->bit;
 
-  pthread_mutex_lock(&(arg->m->lock));
-  *(arg->count) += 1;
-  if(*(arg->count) == NUM_THREADS)
-    {
-      //printf("Waking everyone up.\n");
-      pthread_cond_broadcast(&(arg->m->condition));
-    }
-
-  else while(*(arg->count) < NUM_THREADS)
-	 {
-	   //printf("Waiting, only %d are activated.\n", *(arg->count));
-	   pthread_cond_wait(&(arg->m->condition), &(arg->m->lock));
-	 }
-  pthread_mutex_unlock(&(arg->m->lock));
-
-  //printf("Thread-%d started\n", arg->bit);
 
   for(int i = 0; i < ITERATIONS; i++)
     {
       pthread_mutex_lock(&shared_lock);
       shared_128_int = val;
       pthread_mutex_unlock(&shared_lock);
-      *(arg->started) = true;
+      if(i == 0)
+	{
+	  pthread_mutex_lock(&(arg->m->lock));
+	  *(arg->count) += 1;
+	  if(*(arg->count) == NUM_THREADS)
+	    {
+	      //printf("Waking everyone up.\n");
+	      pthread_cond_broadcast(&(arg->m->condition));
+	    }
+
+	  else while(*(arg->count) < NUM_THREADS)
+		 {
+		   //printf("Waiting, only %d are activated.\n", *(arg->count));
+		   pthread_cond_wait(&(arg->m->condition), &(arg->m->lock));
+		 }
+	  pthread_mutex_unlock(&(arg->m->lock));
+
+	  printf("Thread-%d started\n", arg->bit);
+	  *(arg->started) = true;
+	}
     }
   *(arg->all_done) = true;
-  printf("-");
+  printf("-%d-\n", arg->bit);
   //  printf("Thread-%d completed\n", arg->bit);
 }
 
