@@ -69,6 +69,7 @@ Test2: No lock,  [100000, 10000000, 100000000] iterations and [128, 256, 512, 10
 (starting state: 1, iterations: 1000000, num threads: 128): run over 100 iterations, gives around 0.00001% chance of detecting a non-atomic write
 (either 0 or 2 bits set).
 
+There are about 60 instructions in the loop.
 
 
 ## Wait free

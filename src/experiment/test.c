@@ -48,9 +48,9 @@ void monitor_init(bool (*c)(void*), monitor_t **m, void*extra)
   assert(*m != NULL);
 }
 
-//pthread_mutex_t shared_lock;
+pthread_mutex_t shared_lock;
 
-#define ITERATIONS 100000000
+#define ITERATIONS 1000000
 #define NUM_THREADS 128
 __int128_t shared_128_int = 1;
 int err_count = 0;
@@ -60,24 +60,33 @@ void log_err(__int128_t tmp, int iter)
   unsigned int *tmp_ = (unsigned int *)&tmp;
   printf("More than 2 bits were set in 0x%x%x%x%x on iteration %d\n", tmp_[3], tmp_[2], tmp_[1], tmp_[0], iter);
 }
-long bitcount[4];
-long bitcount_bytes[4][2];
+long *bitcount;
+long *bitcount_bytes[4];
 struct waiter_checker_args {
   bool *all_done;
   bool *started;
 };
 void* waiting_checker(void* args_)
 {
+  bitcount = calloc(4, sizeof(long));
+  long* arr = calloc(8, sizeof(long));
+  bitcount_bytes[0] = arr;
+  bitcount_bytes[1] = arr + 2;
+  bitcount_bytes[2] = arr + 4;
+  bitcount_bytes[3] = arr + 6;  
+  
 
+  
   struct waiter_checker_args *args = (struct waiter_checker_args *)args_;
   while(!*(args->started));
   printf("CHECKER: Started\n");
 
+  struct timespec tm = (struct timespec){ .tv_sec = 0, .tv_nsec = 1000000 };
   for(int i = 0; !*(args->all_done); i++)
   {
-    //pthread_mutex_lock(&shared_lock);
+    pthread_mutex_lock(&shared_lock);
      __int128_t tmp = shared_128_int;
-     //pthread_mutex_unlock(&shared_lock);
+     pthread_mutex_unlock(&shared_lock);
      int* tmp_ = (int*)&tmp;
      bitcount[__builtin_popcount(tmp_[0]) + __builtin_popcount(tmp_[1]) + __builtin_popcount(tmp_[2]) + __builtin_popcount(tmp_[3])]++;
 
@@ -85,7 +94,7 @@ void* waiting_checker(void* args_)
      bitcount_bytes[1][__builtin_popcount(tmp_[1])]++;
      bitcount_bytes[2][__builtin_popcount(tmp_[2])]++;
      bitcount_bytes[3][__builtin_popcount(tmp_[3])]++;
-     
+     nanosleep(&tm, NULL);
   }
   printf("CHECKER: Done\n");
 }
@@ -123,9 +132,9 @@ void* waiting_worker(void* arg_)
 
   for(int i = 0; i < ITERATIONS; i++)
     {
-      //pthread_mutex_lock(&shared_lock);
+      pthread_mutex_lock(&shared_lock);
       shared_128_int = val;
-      //pthread_mutex_unlock(&shared_lock);
+      pthread_mutex_unlock(&shared_lock);
       *(arg->started) = true;
     }
   *(arg->all_done) = true;
