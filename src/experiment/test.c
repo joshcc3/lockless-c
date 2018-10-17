@@ -72,9 +72,6 @@ void* waiting_checker(void* args_)
   struct waiter_checker_args *args = (struct waiter_checker_args *)args_;
   while(!*(args->started));
   printf("CHECKER: Started\n");
-  struct timespec tm = { .tv_sec = 0, .tv_nsec = 10000000 };
-  sleep(1);
-  //nanosleep(&tm, NULL);
 
   for(int i = 0; !*(args->all_done); i++)
   {
@@ -88,7 +85,6 @@ void* waiting_checker(void* args_)
      bitcount_bytes[1][__builtin_popcount(tmp_[1])]++;
      bitcount_bytes[2][__builtin_popcount(tmp_[2])]++;
      bitcount_bytes[3][__builtin_popcount(tmp_[3])]++;
-     nanosleep(&tm, NULL);
   }
 }
 
@@ -97,6 +93,7 @@ struct waiting_worker_args {
   int bit;
   int *count;
   bool *started;
+  bool *all_done;
 };
 void* waiting_worker(void* arg_)
 {
@@ -130,7 +127,7 @@ void* waiting_worker(void* arg_)
       //pthread_mutex_unlock(&shared_lock);
       *(arg->started) = true;
     }
-
+  *(arg->all_done) = true;
   printf("-");
   //  printf("Thread-%d completed\n", arg->bit);
 }
@@ -162,7 +159,7 @@ int main()
   pthread_t tids[NUM_THREADS];
   for(int i = 0; i < NUM_THREADS; i++)
     {
-      args[i] = (struct waiting_worker_args) { .count = &count, .bit = i%128, .m = m, .started = &started };
+      args[i] = (struct waiting_worker_args) { .count = &count, .bit = i%128, .m = m, .started = &started, .all_done = &all_done };
       pthread_create(tids + i, NULL, waiting_worker, (void*)(args + i));
     }
   for(int i = 0; i < NUM_THREADS; i++) pthread_join(tids[i], NULL);
