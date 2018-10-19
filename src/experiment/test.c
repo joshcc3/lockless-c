@@ -55,7 +55,7 @@ void monitor_init(bool (*c)(void*), monitor_t **m, void*extra)
 
 //pthread_mutex_t shared_lock;
 
-#define ITERATIONS 5000000
+#define ITERATIONS 1000000
 #define NUM_THREADS 128
 __int128_t shared_128_int = 1;
 int err_count = 0;
@@ -73,14 +73,12 @@ struct waiter_checker_args {
 };
 void* waiting_checker(void* args_)
 {
-  bitcount = calloc(4, sizeof(long));
+  bitcount = calloc(5, sizeof(long));
   long* arr = calloc(8, sizeof(long));
   bitcount_bytes[0] = arr;
   bitcount_bytes[1] = arr + 2;
   bitcount_bytes[2] = arr + 4;
   bitcount_bytes[3] = arr + 6;  
-  
-
   
   struct waiter_checker_args *args = (struct waiter_checker_args *)args_;
   while(!*(args->started));
@@ -88,9 +86,9 @@ void* waiting_checker(void* args_)
 
   for(int i = 0; !*(args->all_done); i++)
   {
-    // pthread_mutex_lock(&shared_lock);
+    //pthread_mutex_lock(&shared_lock);
      __int128_t tmp = shared_128_int;
-     //pthread_mutex_unlock(&shared_lock);
+     //     pthread_mutex_unlock(&shared_lock);
      int* tmp_ = (int*)&tmp;
      bitcount[__builtin_popcount(tmp_[0]) + __builtin_popcount(tmp_[1]) + __builtin_popcount(tmp_[2]) + __builtin_popcount(tmp_[3])]++;
 
@@ -100,8 +98,8 @@ void* waiting_checker(void* args_)
      bitcount_bytes[3][__builtin_popcount(tmp_[3])]++;
      int sleeping_for =  (int)((double)rand()/RAND_MAX * 1000 + 100);
      //printf("Sleeping for %dns\n", sleeping_for);
-     struct timespec tm = (struct timespec){ .tv_sec = 0, .tv_nsec = sleeping_for };
-     nanosleep(&tm, NULL);
+     //struct timespec tm = (struct timespec){ .tv_sec = 0, .tv_nsec = sleeping_for };
+     //nanosleep(&tm, NULL);
   }
   printf("CHECKER: Done\n");
 }
@@ -121,20 +119,26 @@ void* waiting_worker(void* arg_)
 
   for(int i = 0; i < ITERATIONS; i++)
     {
-      if(i == 5000)
+      if(i == 1000)
 	{
-	  printf("Thread-%d started\n", arg->bit);
+	  //printf("Thread-%d started\n", arg->bit);
 	  *(arg->started) = true;
 
 	}
 
-      //      pthread_mutex_lock(&shared_lock);
-      int byteNum1 = randInRange(3);
-      int byteNum2 = randInRange(3);      
 
+      int bitNum1 = randInRange(127);
+      int bitNum2 = randInRange(127);
+      while(bitNum1/32 == bitNum2/32)
+	{
+	  bitNum1 = randInRange(127);
+	  bitNum2 = randInRange(127);
+	}
       __int128_t tmp = 1;
-      __int128_t val = (tmp << (8*byteNum1)) + (tmp << (8*byteNum2));
+      __int128_t val = (tmp << bitNum1) + (tmp << bitNum2);
+      //pthread_mutex_lock(&shared_lock);
       shared_128_int = val;
+      //printf("Thread-%d: setting %d and %d\n", arg->bit, bitNum1, bitNum2);
       //pthread_mutex_unlock(&shared_lock);
       if(i == 0)
 	{
@@ -190,11 +194,13 @@ int main()
       args[i] = (struct waiting_worker_args) { .count = &count, .bit = i%128, .m = m, .started = &started, .all_done = &all_done };
       pthread_create(tids + i, NULL, waiting_worker, (void*)(args + i));
     }
+  pthread_join(checker_t, NULL);
+  for(int i = 0; i < NUM_THREADS; i++) pthread_cancel(tids[i]);
   for(int i = 0; i < NUM_THREADS; i++) pthread_join(tids[i], NULL);
   all_done = true;
   printf("\nAll done.\n");
-  double sum = (double)bitcount[0] + bitcount[1] + bitcount[2];
-  printf("(Starting State: %d, Iterations: %d, Num threads: %d) - Count: 0 - %ld (%f), 1 - %ld (%f), 2 - %ld (%f)\n", starting_state, ITERATIONS, NUM_THREADS, bitcount[0], bitcount[0]/sum * 100, bitcount[1], bitcount[1]/sum * 100, bitcount[2], bitcount[2]/sum * 100);
+  double sum = (double)bitcount[0] + bitcount[1] + bitcount[2] + bitcount[3] + bitcount[4];
+  printf("(Starting State: %d, Iterations: %d, Num threads: %d) - Count: 0 - %ld (%f), 1 - %ld (%f), 2 - %ld (%f), 3 - %ld (%f), 4 - %ld (%f)\n", starting_state, ITERATIONS, NUM_THREADS, bitcount[0], bitcount[0]/sum * 100, bitcount[1], bitcount[1]/sum * 100, bitcount[2], bitcount[2]/sum * 100, bitcount[3], bitcount[3]/sum *100, bitcount[4], bitcount[4]/sum *100);
 
   double sm1 = bitcount_bytes[0][0] + bitcount_bytes[0][1];
   double sm2 = bitcount_bytes[1][0] + bitcount_bytes[1][1];

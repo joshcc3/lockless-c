@@ -80,7 +80,28 @@ Num 0s, Num 1s, pc 0s, pc 1s)
 [Byte 2] (34, 12, 73.913043, 26.086957)
 [Byte 3] (33, 13, 71.739130, 28.260870)
 
+Randomly set two bits not in the same byte locking around the value:
+```
+(Starting State: 1, Iterations: 1000000, Num threads: 128) - Count: 0 - 0 (0.000000), 1 - 0 (0.000000), 2 - 813 (100.000000), 3 - 0 (0.000000), 4 - 0 (0.000000)
+(
+Num 0s, Num 1s, pc 0s, pc 1s)
+[Byte 0] (391, 422, 48.093481, 51.906519)
+[Byte 1] (396, 417, 48.708487, 51.291513)
+[Byte 2] (423, 390, 52.029520, 47.970480)
+[Byte 3] (416, 397, 51.168512, 48.831488)
+```
 
+Unlocked racing access when setting two bits on disjoint bytes:
+```
+All done.
+(Starting State: 1, Iterations: 1000000, Num threads: 128) - Count: 0 - 3 (0.000218), 1 - 31 (0.002252), 2 - 1376451 (99.993825), 3 - 44 (0.003196), 4 - 7 (0.000509)
+(
+Num 0s, Num 1s, pc 0s, pc 1s)
+[Byte 0] (691361, 685175, 50.224694, 49.775306)
+[Byte 1] (648908, 727628, 47.140649, 52.859351)
+[Byte 2] (733807, 642729, 53.308232, 46.691768)
+[Byte 3] (678975, 697561, 49.324900, 50.675100)
+```
 
 
 ## Wait free
