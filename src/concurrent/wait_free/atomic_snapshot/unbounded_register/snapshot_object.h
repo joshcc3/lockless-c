@@ -14,7 +14,7 @@ struct proc_local {
   value val;
   seq_t seq;
   const snapshot* snap_base;
-} __attribute__ ((packed), (aligned (128)));
+} __attribute__ ((packed, aligned (128)));
 
 typedef struct proc_local proc_local;
 
@@ -27,7 +27,7 @@ typedef struct atomic_object {
 void init_ao(int, atomic_object*);
 
 void ao_update(atomic_object, procid_t, value);
-void ao_snap(atomic_object, procid_t, snapshot*);
+void ao_snap(atomic_object, procid_t, snapshot**);
 
 void print_snap(snapshot*);
 
