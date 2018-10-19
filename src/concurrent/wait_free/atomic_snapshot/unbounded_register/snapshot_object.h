@@ -27,8 +27,8 @@ typedef struct atomic_object {
 void init_ao(int, atomic_object*);
 
 void ao_update(atomic_object, procid_t, value);
-void ao_snap(atomic_object, procid_t, snapshot**);
+void ao_snap(atomic_object, procid_t, const snapshot**);
 
-void print_snap(int, snapshot*);
+void print_snap(int, const snapshot*);
 
 #endif

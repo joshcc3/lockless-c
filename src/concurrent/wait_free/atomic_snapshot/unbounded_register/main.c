@@ -5,19 +5,20 @@
 
 int main()
 {
+  int num_procs = 1;
   atomic_object ao;
-  init_ao(1, &ao);
+  init_ao(num_procs, &ao);
   
-  snapshot *snap1;
+  const snapshot *snap1;
   ao_snap(ao, 0, &snap1);
 
-  print_snap(1, snap1);
+  print_snap(num_procs, snap1);
 
   ao_update(ao, 0, 123);
 
-  snapshot *snap2;
-  ao_snap(ao, 1, &snap2);
-  print_snap(1, snap2);
+  const snapshot *snap2;
+  ao_snap(ao, 0, &snap2);
+  print_snap(num_procs, snap2);
 
   
 

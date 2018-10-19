@@ -1,4 +1,5 @@
-COMPILER_FLAGS := -Wall -std=c11 -lpthread -lm -latomic
+COMPILER_FLAGS := -Wall -std=c11 -ggdb
+COMPILER_LIBS := -lpthread -lm -latomic
 COMPILER := gcc
 PROJECT_ROOT := ${proj_root}
 SRC_DIR :=  $(PROJECT_ROOT)/src
@@ -6,7 +7,7 @@ APP_NAME := concurrent/wait_free/atomic_snapshot/unbounded_register/
 LIB_ROOT := $(SRC_DIR)/$(APP_NAME)
 OUT_ROOT := $(PROJECT_ROOT)/out
 
-COMPILER_CMD := $(COMPILER) $(COMPILER_FLAGS) 
+COMPILER_CMD := $(COMPILER) $(COMPILER_FLAGS) $(COMPILER_LIBS)
 
 
 all: unbounded_regs
