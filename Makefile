@@ -13,15 +13,15 @@ all: unbounded_regs
 
 $(OUT_ROOT)/concurrent/%.o: src/concurrent/%.c
 	mkdir -p $(OUT_ROOT)/concurrent
-	$(COMPILER_CMD) -I . $^ -c -o $@
+	$(COMPILER_CMD) -I$(SRC_DIR) $^ -c -o $@
 
 $(OUT_ROOT)/$(APP_NAME)/%.o: src/$(APP_NAME)/%.c
 	mkdir -p $(OUT_ROOT)/$(APP_NAME)
-	$(COMPILER_CMD) -I . $^ -c -o $@
+	$(COMPILER_CMD) -I$(SRC_DIR) $^ -c -o $@
 
 unbounded_regs: $(OUT_ROOT)/$(APP_NAME)/main.o $(OUT_ROOT)/$(APP_NAME)/snapshot_object.o $(OUT_ROOT)/$(APP_NAME)/conc.o $(OUT_ROOT)/concurrent/atomic.o
 	mkdir -p $(OUT_ROOT)
-	$(COMPILER_CMD) $^ -o $(OUT_ROOT)/$@
+	$(COMPILER_CMD) $^ -I$(SRC_DIR) -o $(OUT_ROOT)/$@
 
 .PHONY clean:
 clean:

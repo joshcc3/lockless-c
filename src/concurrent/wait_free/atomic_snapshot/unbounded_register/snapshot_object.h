@@ -29,6 +29,6 @@ void init_ao(int, atomic_object*);
 void ao_update(atomic_object, procid_t, value);
 void ao_snap(atomic_object, procid_t, snapshot**);
 
-void print_snap(snapshot*);
+void print_snap(int, snapshot*);
 
 #endif

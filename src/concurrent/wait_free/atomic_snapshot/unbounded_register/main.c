@@ -11,13 +11,13 @@ int main()
   snapshot *snap1;
   ao_snap(ao, 0, &snap1);
 
-  print_snap(snap1);
+  print_snap(1, snap1);
 
   ao_update(ao, 0, 123);
 
   snapshot *snap2;
   ao_snap(ao, 1, &snap2);
-  print_snap(snap2);
+  print_snap(1, snap2);
 
   
 
