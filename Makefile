@@ -1,6 +1,6 @@
 COMPILER_FLAGS := -Wall -std=c11
 COMPILER := gcc
-PROJECT_ROOT := /Users/jrc12/josh/projects/Docker/ec2_projects/concurrent-c
+PROJECT_ROOT := ${proj_root}
 SRC_DIR :=  $(PROJECT_ROOT)/src
 APP_NAME := concurrent/wait_free/atomic_snapshot/unbounded_register/
 LIB_ROOT := $(SRC_DIR)/$(APP_NAME)

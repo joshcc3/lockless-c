@@ -10,11 +10,13 @@ typedef struct snapshot {
   const seq_t* seqs;
 } snapshot;
 
-typedef struct proc_local {
+struct proc_local {
   value val;
   seq_t seq;
   const snapshot* snap_base;
-} proc_local;
+} __attribute__ ((packed), (aligned (128)));
+
+typedef struct proc_local proc_local;
 
 typedef struct atomic_object {
   proc_local * shared;

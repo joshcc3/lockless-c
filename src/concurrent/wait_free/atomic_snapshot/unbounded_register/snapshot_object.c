@@ -2,6 +2,7 @@
 #include <assert.h>
 #include <stdbool.h>
 #include "snapshot_object.h"
+#include "concurrent/atomic.h"
 
 #define ITERATION_LIMIT(x) x
 
@@ -16,29 +17,18 @@ typedef struct log_entry_t {
 
 typedef uint128_t byte[128];
 
-void atomic_write_128(uint128_t v, uint128_t w)
-{
-  assert(false);
-}
- void atomic_read_128(uint128_t *v, uint128_t r)
-{
-  assert(false);
-}
-
 // use restrict qualified to vectorize the copying of proc local states
 void collect(atomic_object ao, procid_t pid, proc_local** s)
 {
   *s = (proc_local*)malloc(sizeof(proc_local) * ao.num_procs);
   for(int i = 0; i < ao.num_procs; i++)
   {
-    
-    atomic((atomic_closure) { .func = update_func, .args = (void*)&update_args });
     // TODO should be atomic
-    *s[i] = ao.shared[i];
+    atomic_load((__int128_t*)(ao.shared + i), (__int128_t*)s[i]);
   }
 }
 
-bool snapshot_differs(int n, snapshot previous, snapshot current)
+bool snapshot_differs(int n, snapshot *previous, snapshot *current)
 {
   protected seq_t* p_seqs = previous.seqs;
   protected seq_t* c_seqs = current.seqs;
@@ -95,10 +85,10 @@ void ao_snap(atomic_object ao, procid_t pid, snapshot** snap)
 
   proc_local *previous;
   proc_local *current;
-  collect(&previous);
-  collect(&current);
+  collect(ao, pid, &previous);
+  collect(ao, pid, &current);
   update_and_check(ao.num_procs, log, previous);
-  update_and_check(ao.num_procs, log, current);  
+  update_and_check(ao.num_procs, log, current); 
   for(int i = 0; i < ITERATION_LIMIT(n); i++) {
     if(snapshot_differs(ao.num_procs, previous, current))
     {
@@ -117,7 +107,7 @@ void ao_snap(atomic_object ao, procid_t pid, snapshot** snap)
 	return;
       }
     previous = current;
-    collect(&current);
+    collect(ao, pid, &current);
   }
   assert(false);
 }
@@ -131,13 +121,16 @@ void ao_update(atomic_object ao, procid_t pid, int val)
 	 && ao.shared[0].seq >= 0);
   int prev_seq = ao.shared[pid].seq;
   int prev_val = ao.shared[pid].val;
-  snapshot *snap;
+  const snapshot *snap;
   ao_snap(pid, &snap);
 
-  U_Args args = *(U_Args*)args_;
-  args.ref->val = args.val;
-  args.ref->seq++;
-  args.ref.global_state = args.new_snap
+  __int128_t new_proc_local;
+  int* tmp = (int*)&new_proc_local;
+  tmp[0] = val;
+  tmp[1] = prev_seq + 1;
+  (const snapshot*)(tmp + 2) = snap;
+
+  atomic_store((__int128_t*)(ao.shared + pid), &new_proc_local);
 
   assert(ao.shared[pid].val == val && ao.shared[pid].seq == prev_seq + 1);
 }
