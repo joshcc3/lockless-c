@@ -55,7 +55,7 @@ void monitor_init(bool (*c)(void*), monitor_t **m, void*extra)
 
 //pthread_mutex_t shared_lock;
 
-#define ITERATIONS 1000000
+#define ITERATIONS 5000000
 #define NUM_THREADS 128
 __int128_t shared_128_int = 1;
 int err_count = 0;
@@ -87,7 +87,10 @@ void* waiting_checker(void* args_)
   for(int i = 0; !*(args->all_done); i++)
   {
     //pthread_mutex_lock(&shared_lock);
-     __int128_t tmp = shared_128_int;
+    //__int128_t tmp = shared_128_int;
+    
+    __int128_t tmp = -1;
+    __atomic_compare_exchange(&shared_128_int, &tmp, &tmp, false, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
      //     pthread_mutex_unlock(&shared_lock);
      int* tmp_ = (int*)&tmp;
      bitcount[__builtin_popcount(tmp_[0]) + __builtin_popcount(tmp_[1]) + __builtin_popcount(tmp_[2]) + __builtin_popcount(tmp_[3])]++;
@@ -115,8 +118,6 @@ void* waiting_worker(void* arg_)
 {
   struct waiting_worker_args *arg = (struct waiting_worker_args *)arg_;
   
-
-
   for(int i = 0; i < ITERATIONS; i++)
     {
       if(i == 1000)
@@ -137,7 +138,9 @@ void* waiting_worker(void* arg_)
       __int128_t tmp = 1;
       __int128_t val = (tmp << bitNum1) + (tmp << bitNum2);
       //pthread_mutex_lock(&shared_lock);
-      shared_128_int = val;
+      __atomic_compare_exchange(&shared_128_int, &shared_128_int, &val, false, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
+      //__atomic_store_16(&shared_128_int, val, __ATOMIC_SEQ_CST);
+      //shared_128_int = val;
       //printf("Thread-%d: setting %d and %d\n", arg->bit, bitNum1, bitNum2);
       //pthread_mutex_unlock(&shared_lock);
       if(i == 0)

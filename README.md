@@ -103,6 +103,19 @@ Num 0s, Num 1s, pc 0s, pc 1s)
 [Byte 3] (678975, 697561, 49.324900, 50.675100)
 ```
 
+With an atomic compare and exchange it looks like its actually atomic.
+```
+All done.
+(Starting State: 1, Iterations: 5000000, Num threads: 128) - Count: 0 - 0 (0.000000), 1 - 0 (0.000000), 2 - 8217932 (100.000000), 3 - 0 (0.000000), 4 - 0 (0.000000)
+(
+Num 0s, Num 1s, pc 0s, pc 1s)
+[Byte 0] (4143038, 4074894, 50.414606, 49.585394)
+[Byte 1] (3992507, 4225425, 48.582867, 51.417133)
+[Byte 2] (4229243, 3988689, 51.463592, 48.536408)
+[Byte 3] (4071076, 4146856, 49.538935, 50.461065)
+```
+Things to note - you need to include the atomic library, there is no 16byte load and store just cmpxchg (which is strong enough for both). Setting half the bytes is best because of more of a chance of observing race conditions and getting a normal distribution.
+
 
 ## Wait free
 An algorithm is wait free if every individual thread finishes in a bounded number of steps no matter what other threads do. (e.g. another thread could behave adversarily or simply block).
