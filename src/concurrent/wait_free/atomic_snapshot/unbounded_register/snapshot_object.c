@@ -20,7 +20,7 @@ typedef log_entry_t* log_t;
 void collect(atomic_object ao, procid_t pid, proc_local** s)
 {
   *s = (proc_local*)malloc(sizeof(proc_local) * ao.num_procs);
-  for(int i = 0; i < ao.num_procs; i++) atomic_load((__int128_t*)(ao.shared + i), (__int128_t*)(*s + i));
+  for(int i = 0; i < ao.num_procs; i++) atomic_load((__int128_t*)(*s + i), (__int128_t*)(ao.shared + i));
 }
 
 bool proc_state_differs(int n, proc_local* previous, proc_local* current)
@@ -64,7 +64,7 @@ void init_snapshot_from_existing(int n, proc_local *snapped_state, const snapsho
   for(int i = 0; i < n; i++)
     {
       proc_local tmp;
-      atomic_load((__int128_t*)&tmp, (__int128_t*)snapped_state + i);
+      atomic_load((__int128_t*)&tmp, (__int128_t*)(snapped_state + i));
       tmp_values[i] = tmp.val;
       tmp_seqs[i] = tmp.seq;
     }
@@ -127,7 +127,7 @@ void ao_snap(atomic_object ao, procid_t pid, const snapshot** snap)
       {
 	// double collection - there was a valid snapshot
 	init_snapshot_from_existing(ao.num_procs, current, snap);
-	//assert(*snap->seqs[i] > old_snap->seqs[i] || (*snap->seqs[i] == old_snap->seqs[i] && *snap->values[i] == old_snap->values[i]));	
+	//assert((*snap)->seqs[i] > old_snap->seqs[i] || ((*snap)->seqs[i] == old_snap->seqs[i] && (*snap)->values[i] == old_snap->values[i]));
 	return;
       }
     previous = current;
