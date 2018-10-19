@@ -37,7 +37,7 @@ int update_log(log_t log, int i, int new_seq)
       log[i].count++;
       log[i].seq_no = new_seq;
   }
-  return log[i].count == 3;
+  return log[i].count;
 }
 
 void init_snapshot(int n, const snapshot **res)
@@ -80,15 +80,15 @@ bool update_and_check(int n, log_t log, const proc_local* c, const snapshot **re
   for(int i = 0; i < n; i++)
   {
     log_entry_t old_entry = log[i];
-    if(update_log(log, i, c[i].seq) >= 2)
+    if(update_log(log, i, c[i].seq) == 3)
     {
       *result = c[i].snap_base;
-      assert(old_entry.seq_no < c[i].seq || old_entry.count == 2);
+      assert(old_entry.seq_no < c[i].seq || old_entry.count == 3);
       return true;
     }
-    assert(old_entry.seq_no == c[i].seq || log[i].count == 1);
+    assert(old_entry.seq_no == c[i].seq || log[i].count < 3);
   }
-  for(int i = 0; i < n; i++) assert(log[i].count <= 1);
+  for(int i = 0; i < n; i++) assert(log[i].count <= 2);
   return false;
 }
 
@@ -176,7 +176,7 @@ static void init_proc_local(int n, proc_local **procs)
   const snapshot *snap;
   init_snapshot(n, &snap);
 
-  for(int i = 0; i < n; i++) *procs[i] = (proc_local){ .val = 0, .seq = 0, .snap_base = snap };
+  for(int i = 0; i < n; i++) (*procs)[i] = (proc_local){ .val = 0, .seq = 0, .snap_base = snap };
 
   assert(*procs);
 
@@ -193,5 +193,5 @@ void init_ao(const int n, atomic_object *ao)
   ao->shared = procs;
 
   // check that procs was inited and that the value in the snap that n-1 has for n-1 matches what it stores locally
-  assert(procs && procs[n-1].seq == 0 && procs[n-1].val == procs[n-1].snap_base[n-1].values[n-1]);
+  assert(procs && procs[n-1].seq == 0 && procs[n-1].val == procs[n-1].snap_base->values[n-1]);
 }

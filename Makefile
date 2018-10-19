@@ -1,4 +1,4 @@
-COMPILER_FLAGS := -Wall -std=c11 -ggdb
+COMPILER_FLAGS := -Wall -std=c11 -ggdb -mcx16
 COMPILER_LIBS := -lpthread -lm -latomic
 COMPILER := gcc
 PROJECT_ROOT := ${proj_root}
@@ -7,7 +7,7 @@ APP_NAME := concurrent/wait_free/atomic_snapshot/unbounded_register/
 LIB_ROOT := $(SRC_DIR)/$(APP_NAME)
 OUT_ROOT := $(PROJECT_ROOT)/out
 
-COMPILER_CMD := $(COMPILER) $(COMPILER_FLAGS) $(COMPILER_LIBS)
+COMPILER_CMD := $(COMPILER) $(COMPILER_FLAGS)
 
 
 all: unbounded_regs
@@ -22,7 +22,7 @@ $(OUT_ROOT)/$(APP_NAME)/%.o: src/$(APP_NAME)/%.c
 
 unbounded_regs: $(OUT_ROOT)/$(APP_NAME)/main.o $(OUT_ROOT)/$(APP_NAME)/snapshot_object.o $(OUT_ROOT)/$(APP_NAME)/conc.o $(OUT_ROOT)/concurrent/atomic.o
 	mkdir -p $(OUT_ROOT)
-	$(COMPILER_CMD) $^ -I$(SRC_DIR) -o $(OUT_ROOT)/$@
+	$(COMPILER_CMD) $^ -I$(SRC_DIR) -o $(OUT_ROOT)/$@  $(COMPILER_LIBS)
 
 .PHONY clean:
 clean:
