@@ -95,7 +95,6 @@ Unlocked racing access when setting two bits on disjoint bytes:
 ```
 All done.
 (Starting State: 1, Iterations: 1000000, Num threads: 128) - Count: 0 - 3 (0.000218), 1 - 31 (0.002252), 2 - 1376451 (99.993825), 3 - 44 (0.003196), 4 - 7 (0.000509)
-(
 Num 0s, Num 1s, pc 0s, pc 1s)
 [Byte 0] (691361, 685175, 50.224694, 49.775306)
 [Byte 1] (648908, 727628, 47.140649, 52.859351)
@@ -1067,6 +1066,16 @@ test/stg/target/main3: test/stg/target/stg/plus_int/code.o test/stg/target/stg/p
 
 All top level lines need to end with a `:`. (including phone decls.)
 
+You can include the result of shell operations with $(shell [cmd]). You can perform variable substitution for everything inside a variable with
+```
+foo := a.o b.o
+bar := $(foo:%.c=%.o)
+
+For some reasons when compiling with gcc, sometimes the libraries need to be mentioned at the end of the compile command. Also, `-lpthread -lm -latomic -Llibs -ljc` is wrong.
+The `-ljc` which depends on `-latomic` needs to be mentioned before it for some reason otherwise it can't find it.
+
+# bar contains a.c b.c
+```
 
 # Oh, No!
 ## __builtin_popcount only works for up to 32 bits and doesn't actually work on 64/128 bits

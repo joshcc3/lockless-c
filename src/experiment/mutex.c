@@ -63,7 +63,7 @@ void lock(lock_t *lock)
       bool result = compare_and_swap(lock, 1, 2);
       if(result) break;
     }
-    else nanosleep(LOCK_SLEEP_INTERVAL, NULL);
+    else nanosleep(&LOCK_SLEEP_INTERVAL, NULL);
   }
 
 }
@@ -85,7 +85,7 @@ void faulty_lock(lock_t *lock)
       lock->state = 2;
       break;
     }
-    else nanosleep(LOCK_SLEEP_INTERVAL);
+    else nanosleep(&LOCK_SLEEP_INTERVAL, NULL);
   }
   
 }

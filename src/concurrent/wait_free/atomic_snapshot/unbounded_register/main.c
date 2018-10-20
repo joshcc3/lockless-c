@@ -2,11 +2,13 @@
 #include <pthread.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include "snapshot_object.h"
 #include <time.h>
+#include <assert.h>
+#include <sys/time.h>
+#include <time/sleep.h>
+#include <time/pprint.h>
 
-int rand_in_range(int mx) { return (int)((double)rand()/RAND_MAX * mx); }
-
+#include "snapshot_object.h"
 
 void single_threaded_test()
 {
@@ -96,13 +98,13 @@ void* worker(void* args_)
 	  ao_snap(ao, pid, &initial);
 	  int total_count = 0;
 	  for(int j = 0; j < ao.num_procs; j++) total_count += initial->values[j];
-	  printf("Thread-%d: (iteration %d, tot_sum %d)\n", pid, i, total_count);
+	  printf("%llu: Thread-%d: (iteration %d, tot_sum %d)\n", now(), pid, i, total_count);
 	}
-      int rand_sleep = rand_in_range(200);
-      const struct timespec tm = (struct timespec){ .tv_sec = 0, .tv_nsec = rand_sleep };
-      nanosleep(&tm, NULL);
     }
-    return NULL;
+
+  int *res = (int*)malloc(sizeof(int));
+  *res = acc;
+  return (void*)res;
 }
 
 void multi_threaded_app()
@@ -114,10 +116,21 @@ void multi_threaded_app()
   for(int i = 0; i < num; i++)
     {
       struct worker_args *args = (struct worker_args*)malloc(sizeof(struct worker_args));
-      *args = (struct worker_args){ .obj = &ao, .pid = i, .iterations = 10000, .checkpoint_count = 100, .num = num };
+      *args = (struct worker_args){ .obj = &ao, .pid = i, .iterations = 1000, .checkpoint_count = 100, .num = num };
       pthread_create(pids + i, NULL, worker, args);
     }
-
+  int exp_accum = 0;
+  for(int i = 0; i < num; i++) 
+    {
+      int *res;
+      pthread_join(pids[i], (void*)&res);
+      exp_accum += *res;
+    };
+  const snapshot *snap_;
+  ao_snap(ao, 0, &snap_);
+  int actual_accum = 0;
+  for(int i = 0; i < num; i++) actual_accum += snap_->values[i];
+  assert(exp_accum == actual_accum);
   pthread_exit(NULL);
   
 }

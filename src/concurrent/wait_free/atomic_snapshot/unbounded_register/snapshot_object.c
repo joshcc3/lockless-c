@@ -117,6 +117,7 @@ void ao_snap(atomic_object ao, procid_t pid, const snapshot** snap)
   for(int i = 0; i < ITERATION_LIMIT(ao.num_procs); i++) {
     if(proc_state_differs(ao.num_procs, previous, current))
     {
+      printf("Thread-%d: Attempt %i double collect interleaved with write\n", pid, i);
       if(update_and_check(ao.num_procs, log, current, snap))
 	{
 	  for(int i = 0; i < ao.num_procs; i++) assert((*snap)->seqs[i] > old_snap->seqs[i] || ((*snap)->seqs[i] == old_snap->seqs[i] && (*snap)->values[i] == old_snap->values[i]));
@@ -127,7 +128,7 @@ void ao_snap(atomic_object ao, procid_t pid, const snapshot** snap)
       {
 	// double collection - there was a valid snapshot
 	init_snapshot_from_existing(ao.num_procs, current, snap);
-	//assert((*snap)->seqs[i] > old_snap->seqs[i] || ((*snap)->seqs[i] == old_snap->seqs[i] && (*snap)->values[i] == old_snap->values[i]));
+	assert((*snap)->seqs[i] > old_snap->seqs[i] || ((*snap)->seqs[i] == old_snap->seqs[i] && (*snap)->values[i] == old_snap->values[i]));
 	return;
       }
     previous = current;

@@ -1,30 +1,32 @@
 COMPILER_FLAGS := -Wall -std=c11 -ggdb -mcx16
-COMPILER_LIBS := -lpthread -lm -latomic
+COMPILER_LIBS :=  -Llibs -ljc -lpthread -lm -latomic
+COMPILER_INCLUDES := -Iinclude
 COMPILER := gcc
-PROJECT_ROOT := ${proj_root}
-SRC_DIR :=  $(PROJECT_ROOT)/src
-APP_NAME := concurrent/wait_free/atomic_snapshot/unbounded_register/
+SRC_DIR :=  src
+APP_NAME := concurrent/wait_free/atomic_snapshot/unbounded_register
 LIB_ROOT := $(SRC_DIR)/$(APP_NAME)
-OUT_ROOT := $(PROJECT_ROOT)/out
+OUT_ROOT := out
 
 COMPILER_CMD := $(COMPILER) $(COMPILER_FLAGS)
 
+source_files := $(shell cd src && find . -type d -name 'experiment' -prune -o -type f -name "*.c" -print)
 
 all: unbounded_regs
 
-$(OUT_ROOT)/concurrent/%.o: src/concurrent/%.c
+concurrent/%.o: src/concurrent/%.c
+	echo $(source_files)
 	mkdir -p $(OUT_ROOT)/concurrent
-	$(COMPILER_CMD) -I$(SRC_DIR) $^ -c -o $@
+	$(COMPILER_CMD) $(COMPILER_INCLUDES) -I$(SRC_DIR) $^ -c -o out/$@  $(COMPILER_LIBS)
 
-$(OUT_ROOT)/$(APP_NAME)/%.o: src/$(APP_NAME)/%.c
+$(APP_NAME)/%.o: src/$(APP_NAME)/%.c
 	mkdir -p $(OUT_ROOT)/$(APP_NAME)
-	$(COMPILER_CMD) -I$(SRC_DIR) $^ -c -o $@
+	$(COMPILER_CMD) $(COMPILER_INCLUDES) -I$(SRC_DIR) $^ -c -o out/$@ $(COMPILER_LIBS)
 
-unbounded_regs: $(OUT_ROOT)/$(APP_NAME)/main.o $(OUT_ROOT)/$(APP_NAME)/snapshot_object.o $(OUT_ROOT)/$(APP_NAME)/conc.o $(OUT_ROOT)/concurrent/atomic.o
+unbounded_regs: $(source_files:%.c=%.o)
+	echo $^
 	mkdir -p $(OUT_ROOT)
-	$(COMPILER_CMD) $^ -I$(SRC_DIR) -o $(OUT_ROOT)/$@  $(COMPILER_LIBS)
+	$(COMPILER_CMD)  $(COMPILER_INCLUDES) $(shell find out -type f -name "*.o")  -I$(SRC_DIR) -o out/unbounded_regs $(COMPILER_LIBS)
 
 .PHONY clean:
 clean:
-	rm -rf $(PROJECT_ROOT)/out
-
+	rm -rf $(OUT_ROOT)
