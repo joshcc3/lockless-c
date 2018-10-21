@@ -16,11 +16,10 @@ void stdout_handler(string_);
 //void with_context(struct log_context, void* (*fn)(void*));
 
 //void (*file_output_handler)(char*);
-const struct log_context std_log_context = (struct log_context){ .formatter = std_format_fn, .message_handler = stdout_handler };
 
 void log_info_(string_);
-void log_info(char*);
-void log_err(char*);
+void log_info(char*, ...);
+void log_err(char*, ...);
 void log_err_(string_);
 
 #endif

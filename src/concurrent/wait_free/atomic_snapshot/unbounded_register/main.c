@@ -7,7 +7,7 @@
 #include <sys/time.h>
 #include <time/sleep.h>
 #include <time/pprint.h>
-
+#include <log.h>
 #include "snapshot_object.h"
 
 void single_threaded_test()
@@ -98,7 +98,7 @@ void* worker(void* args_)
 	  ao_snap(ao, pid, &initial);
 	  int total_count = 0;
 	  for(int j = 0; j < ao.num_procs; j++) total_count += initial->values[j];
-	  printf("%llu: Thread-%d: (iteration %d, tot_sum %d)\n", now(), pid, i, total_count);
+	  log_info("(iteration %d, tot_sum %d)\0", i, total_count);
 	}
     }
 
