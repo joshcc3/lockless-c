@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include "snapshot_object.h"
 #include "concurrent/atomic.h"
+#include <log.h>
 
 #define ITERATION_LIMIT(x) x
 
@@ -117,7 +118,7 @@ void ao_snap(atomic_object ao, procid_t pid, const snapshot** snap)
   for(int i = 0; i < ITERATION_LIMIT(ao.num_procs); i++) {
     if(proc_state_differs(ao.num_procs, previous, current))
     {
-      printf("Thread-%d: Attempt %i double collect interleaved with write\n", pid, i);
+      log_info("Thread-%d: Attempt %i double collect interleaved with write\n", pid, i);
       if(update_and_check(ao.num_procs, log, current, snap))
 	{
 	  for(int i = 0; i < ao.num_procs; i++) assert((*snap)->seqs[i] > old_snap->seqs[i] || ((*snap)->seqs[i] == old_snap->seqs[i] && (*snap)->values[i] == old_snap->values[i]));
@@ -163,8 +164,8 @@ void ao_update(atomic_object ao, procid_t pid, int val)
 
 void print_snap(int n, const snapshot* snap)
 {
-  for(int i = 0; i < n - 1; i++) printf("(%d, %d), ", snap->values[i], snap->seqs[i]);
-  printf("(%d, %d)\n", snap->values[n-1], snap->seqs[n - 1]);
+  for(int i = 0; i < n - 1; i++) log_info("(%d, %d), ", snap->values[i], snap->seqs[i]);
+  log_info("(%d, %d)\n", snap->values[n-1], snap->seqs[n - 1]);
 }
 
 
