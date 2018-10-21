@@ -90,6 +90,7 @@ void* worker(void* args_)
   for(int i = 0; i < args->iterations; i++)
     {
       acc += rand_in_range(100);
+
       ao_update(*(args->obj), pid, acc);
 
       if(i%args->checkpoint_count == 0)
@@ -98,7 +99,6 @@ void* worker(void* args_)
 	  ao_snap(ao, pid, &initial);
 	  int total_count = 0;
 	  for(int j = 0; j < ao.num_procs; j++) total_count += initial->values[j];
-	  log_info("(iteration %d, tot_sum %d)\0", i, total_count);
 	}
     }
 
@@ -107,16 +107,15 @@ void* worker(void* args_)
   return (void*)res;
 }
 
-void multi_threaded_app()
+void multi_threaded_app(int num, int iterations)
 {
-  int num = 10;
   atomic_object ao;
   init_ao(num, &ao);
   pthread_t pids[num];
   for(int i = 0; i < num; i++)
     {
       struct worker_args *args = (struct worker_args*)malloc(sizeof(struct worker_args));
-      *args = (struct worker_args){ .obj = &ao, .pid = i, .iterations = 1000, .checkpoint_count = 100, .num = num };
+      *args = (struct worker_args){ .obj = &ao, .pid = i, .iterations = iterations, .checkpoint_count = iterations/100, .num = num };
       pthread_create(pids + i, NULL, worker, args);
     }
   int exp_accum = 0;
@@ -126,16 +125,18 @@ void multi_threaded_app()
       pthread_join(pids[i], (void*)&res);
       exp_accum += *res;
     };
-  const snapshot *snap_;
+  /*const snapshot *snap_; // sanity check
   ao_snap(ao, 0, &snap_);
   int actual_accum = 0;
   for(int i = 0; i < num; i++) actual_accum += snap_->values[i];
-  assert(exp_accum == actual_accum);
+  assert(exp_accum == actual_accum);*/
   pthread_exit(NULL);
   
 }
 
-int main()
+int main(int argc, char** argv)
 {
-  multi_threaded_app();
+  if(argc < 3) { perror("Need <number of procs> <num iterations>\n"); return 0; }
+  
+  multi_threaded_app(atoi(argv[1]), atoi(argv[2]));
 }

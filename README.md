@@ -134,10 +134,55 @@ A collect operation involves examining the sequence nos. for each thread and tak
 We also need to argue that this is atomic: they are is that new snapshots are only produced on double collects which are atomic. Otherwise we reuse old snapshots which by induction are atomic.
 In practice writers will wait until they observe a double collect.
 
+For wait free atomic snapshots, we want:
+ - all snapshotters terminate in a finite number of steps - empircally true (and justified above)
+ - if a snap s1 finishes before snap s2 begins then all seq nos. of s2's snap should be > s1
+ - the snap should represent a value that actually occurred at some point during the interval between which the snap started and ended
+ - updates should eventually make their way into a snap.
+
+## Performance analysis:
+```
+# Some python code to parse the log lines
+def mkline(line):
+    headers = ["app", "commitid", "datefmt", "unix_tstamp", 'tid', 'message']    
+    return dict(zip(headers, regex.match(line).groups()))
+
+def process_log_file(fname):
+    content = open('../../../logs/{}'.format(fname)).read()
+    regex = re.compile('([a-zA-Z0-9_]*)-([0-9a-zA-Z]*)-(.*) (\d*) Thread-(\d*): (.*)')     
+    log_lines = pd.DataFrame(map_(mkline)(content.splitlines()))    
+    log_lines.to_csv('/Users/jrc12/josh/projects/processed_logs/{}'.format(fname))
+    return log_lines
+```
+Should perform these checks for both read heavy/write heavy workloads.
+We should compare this against a locking implementation
+The X-axis number of processes.
+The Y-axis:
+ - Snapshot completion time (nanoseconds)
+ - Update time
+
+Other interesting characteristics:
+X-axis number of processes
+Y-axis:
+ - ratio of collects to snapshot attempts
+ - time to collect
+ - % of times when a snapshot ends with generating a new one
+ - % of times when a snapshot ends with using an old one
+ - Time between a write being made and it manifesting in a snapshot
+(relationship between the last one and the probability of a new snapshot + snapshot time
+collects/snapshot - %of times generating a new snap
+snapshot completion time - number of collects per snap attempt
+)
+
+I ran some benchmarks with the following params:
+Num procs x Number of snaps [10, 100, 1000] x [10000, 100000, 1000000].
+I ran each of the tests 20 times - results are under `analysis/`. It also contains the notebook with graphs illustrating the relationship between the various parameters.
+
+
 
 
 #### Questions
-Does this work when all of them are talking about the same object (does it give a consistent picture)
+Does this work when all of them are talking about the same object (does it give a consistent picture) - no they're meant to be distinct although commutative associative operations work fine (sum, max, min etc.)
 
 
 # Threading interface
@@ -1026,6 +1071,9 @@ while (X == 0)
 If t1 and t2 constently perform the update right after each other they will never break out of the loop.
 
 Different compiler/processor optimizations: caching, instruction pre-fecthing, branch prediction, instruction re-ordering.
+
+# Project setup:
+`build.sh` to rebuild. `run.sh` to run the project. It generates a log file to /logs/{run-name}. `/logs` is usually mounted to `~/josh/projects/logs/{project-name}` (shoul use a `volume` for this instead). Logstash runs on that directory parsing those files uploading to my elasticsearch cluster. The run-name consists of the {app name}-{commit id}-{time stamp}. I've put some processed logs inside `~/josh/projects/processed_logs`. `/code/libs` contains all my libs.
 
 # Dev in C
 

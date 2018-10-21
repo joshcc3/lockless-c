@@ -20,8 +20,10 @@ typedef log_entry_t* log_t;
 // use restrict qualified to vectorize the copying of proc local states
 void collect(atomic_object ao, procid_t pid, proc_local** s)
 {
+  log_info("COLLECT BEGIN\0");
   *s = (proc_local*)malloc(sizeof(proc_local) * ao.num_procs);
   for(int i = 0; i < ao.num_procs; i++) atomic_load((__int128_t*)(*s + i), (__int128_t*)(ao.shared + i));
+  log_info("COLLECT END\0");
 }
 
 bool proc_state_differs(int n, proc_local* previous, proc_local* current)
@@ -98,6 +100,7 @@ void ao_snap(atomic_object ao, procid_t pid, const snapshot** snap)
   // Pre: valid args
   // Post: In the new snapshot, seq numbers must either have increased or values are unchanged
 
+  log_info("START SNAP\0");
   assert(ao.num_procs >= 1
 	 && pid >= 0
 	 && pid < ao.num_procs
@@ -118,30 +121,34 @@ void ao_snap(atomic_object ao, procid_t pid, const snapshot** snap)
   for(int i = 0; i < ITERATION_LIMIT(ao.num_procs); i++) {
     if(proc_state_differs(ao.num_procs, previous, current))
     {
-      log_info("(internal tid: %d) Attempt %d double collect interleaved with write\0", pid, i);
+      log_info("DOUBLE COLLECT FAIL - %d\0", i + 1);
       if(update_and_check(ao.num_procs, log, current, snap))
 	{
+	  log_info("CASE B - %d\0", i+1);
 	  for(int i = 0; i < ao.num_procs; i++) assert((*snap)->seqs[i] > old_snap->seqs[i] || ((*snap)->seqs[i] == old_snap->seqs[i] && (*snap)->values[i] == old_snap->values[i]));
-	  return;
+	  break;
 	}
     }
     else
       {
 	// double collection - there was a valid snapshot
+	log_info("CASE A - %d\0", i + 1);
 	init_snapshot_from_existing(ao.num_procs, current, snap);
 	assert((*snap)->seqs[i] > old_snap->seqs[i] || ((*snap)->seqs[i] == old_snap->seqs[i] && (*snap)->values[i] == old_snap->values[i]));
-	return;
+	break;
       }
+    free(previous);
     previous = current;
     collect(ao, pid, &current);
 
   }
-  assert(false);
+  log_info("END SNAP\0");
 }
 
 
 void ao_update(atomic_object ao, procid_t pid, int val)
 {
+  log_info("START UPDATE\0");
   assert(ao.num_procs >= 1
 	 && pid >= 0
 	 && pid < ao.num_procs
@@ -160,6 +167,7 @@ void ao_update(atomic_object ao, procid_t pid, int val)
   atomic_store(&new_proc_local, (__int128_t*)(ao.shared + pid));
 
   assert(ao.shared[pid].val == val && ao.shared[pid].seq == prev_seq + 1);
+  log_info("END UPDATE\0");
 }
 
 void print_snap(int n, const snapshot* snap)
