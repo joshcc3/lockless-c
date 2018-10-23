@@ -1,3 +1,0 @@
-#define MAGIC 123
-
-
