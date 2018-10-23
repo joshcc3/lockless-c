@@ -175,11 +175,34 @@ snapshot completion time - number of collects per snap attempt
 )
 
 I ran some benchmarks with the following params:
-Num procs x Number of snaps [10, 100, 1000] x [10000, 100000, 1000000].
-I ran each of the tests 20 times - results are under `analysis/`. It also contains the notebook with graphs illustrating the relationship between the various parameters.
+Num procs x Number of snaps [8, 16, 32, 40, 48, 64, 72, 80] x [100, 200, 400, 800, 1600].
+Results are under `analysis/`. It also contains the notebook with graphs illustrating the relationship between the various parameters.
+From the graphs - the total execution time increases roughly linearly - as long as it's not competing with os for resources.
+Another (expected) observation is that the number of collects increases with the number of processes simulatneously snapping stuff. Every 80 new processes collecting, 1 more collect needs to be performed on average per snapshot.
+
+The collect time strangely doesn't increase linearly although it's basically a linear increase in the number of atomic loads and stores.
+
+The number of Case A counts also for each initially increases and after about 60 simultaneous snappers processes it starts decreasing.
 
 
-
+```
+# Example of interleaving for a double collect fail
+unbounded_regs-abb7053b043010ba1c9a631c69f622278d57e539-Mon_Oct_22_18-55-00_UTC_2018 1540234500662761 Thread-5248: START SNAP
+unbounded_regs-abb7053b043010ba1c9a631c69f622278d57e539-Mon_Oct_22_18-55-00_UTC_2018 1540234500662763 Thread-5246: COLLECT END
+unbounded_regs-abb7053b043010ba1c9a631c69f622278d57e539-Mon_Oct_22_18-55-00_UTC_2018 1540234500662766 Thread-5248: COLLECT BEGIN
+unbounded_regs-abb7053b043010ba1c9a631c69f622278d57e539-Mon_Oct_22_18-55-00_UTC_2018 1540234500662769 Thread-5246: CASE A - 1
+unbounded_regs-abb7053b043010ba1c9a631c69f622278d57e539-Mon_Oct_22_18-55-00_UTC_2018 1540234500662770 Thread-5248: COLLECT END
+unbounded_regs-abb7053b043010ba1c9a631c69f622278d57e539-Mon_Oct_22_18-55-00_UTC_2018 1540234500662772 Thread-5246: END SNAP
+unbounded_regs-abb7053b043010ba1c9a631c69f622278d57e539-Mon_Oct_22_18-55-00_UTC_2018 1540234500662772 Thread-5248: COLLECT BEGIN
+unbounded_regs-abb7053b043010ba1c9a631c69f622278d57e539-Mon_Oct_22_18-55-00_UTC_2018 1540234500662776 Thread-5246: END UPDATE
+unbounded_regs-abb7053b043010ba1c9a631c69f622278d57e539-Mon_Oct_22_18-55-00_UTC_2018 1540234500662778 Thread-5246: START SNAP
+unbounded_regs-abb7053b043010ba1c9a631c69f622278d57e539-Mon_Oct_22_18-55-00_UTC_2018 1540234500662779 Thread-5246: COLLECT BEGIN
+unbounded_regs-abb7053b043010ba1c9a631c69f622278d57e539-Mon_Oct_22_18-55-00_UTC_2018 1540234500662781 Thread-5246: COLLECT END
+unbounded_regs-abb7053b043010ba1c9a631c69f622278d57e539-Mon_Oct_22_18-55-00_UTC_2018 1540234500662783 Thread-5246: COLLECT BEGIN
+unbounded_regs-abb7053b043010ba1c9a631c69f622278d57e539-Mon_Oct_22_18-55-00_UTC_2018 1540234500662787 Thread-5246: COLLECT END
+unbounded_regs-abb7053b043010ba1c9a631c69f622278d57e539-Mon_Oct_22_18-55-00_UTC_2018 1540234500662795 Thread-5248: COLLECT END
+unbounded_regs-abb7053b043010ba1c9a631c69f622278d57e539-Mon_Oct_22_18-55-00_UTC_2018 1540234500662798 Thread-5248: DOUBLE COLLECT FAIL - 1
+```
 
 #### Questions
 Does this work when all of them are talking about the same object (does it give a consistent picture) - no they're meant to be distinct although commutative associative operations work fine (sum, max, min etc.)

@@ -7,4 +7,4 @@ commitid=`git rev-parse HEAD`
 export RUN_NAME=$fname-$commitid-`date | sed 's/ /_/g' | sed 's/:/-/g'`
 echo "Running: $RUN_NAME"
 
-./$1 $2 $3 | gzip --best > /logs/$RUN_NAME.log
+./$1 $2 $3 > /logs/.tmp.$RUN_NAME.log && mv /logs/.tmp.$RUN_NAME.log  /logs/$RUN_NAME.log 

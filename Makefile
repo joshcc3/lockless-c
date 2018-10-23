@@ -1,4 +1,4 @@
-COMPILER_FLAGS := -Wall -std=c11 -ggdb -mcx16
+COMPILER_FLAGS := -Wall -std=c11 -g -mcx16 -O2
 COMPILER_LIBS :=  -Llibs -ljc -lpthread -lm -latomic
 COMPILER_INCLUDES := -Iinclude
 COMPILER := gcc
