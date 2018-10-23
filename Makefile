@@ -11,7 +11,7 @@ COMPILER_CMD := $(COMPILER) $(COMPILER_FLAGS)
 
 source_files := $(shell cd src && find concurrent -type d -name 'experiment' -prune -o -type f -name "*.c" -print)
 
-all: unbounded_regs
+all: ao.out
 
 
 $(APP_NAME)/%.o: src/$(APP_NAME)/%.c
@@ -33,13 +33,9 @@ concurrent/%.o: src/concurrent/%.c
 	mkdir -p $(OUT_ROOT)/concurrent
 	$(COMPILER_CMD) $(COMPILER_INCLUDES) -I$(SRC_DIR) $^ -c -o out/$@  $(COMPILER_LIBS)
 
-unbounded_regs: $(source_files:%.c=%.o) src/unbounded_regs.c
+ao.out: $(source_files:%.c=%.o) src/main.c
 	mkdir -p $(OUT_ROOT)
-	$(COMPILER_CMD)  $(COMPILER_INCLUDES) $(shell find out/concurrent -type f -name "*.o") src/unbounded_regs.c -I$(SRC_DIR) -o out/unbounded_regs $(COMPILER_LIBS)
-
-locking: $(source_files:%.c=%.o) src/locking.c
-	mkdir -p $(OUT_ROOT)
-	$(COMPILER_CMD)  $(COMPILER_INCLUDES) $(shell find out/concurrent -type f -name "*.o") src/locking.c -I$(SRC_DIR) -o out/locking $(COMPILER_LIBS)
+	$(COMPILER_CMD)  $(COMPILER_INCLUDES) $(shell find out/concurrent -type f -name "*.o") src/main.c -I$(SRC_DIR) -o out/ao.out $(COMPILER_LIBS)
 
 #locking: $(source_files:%.c=%.o)
 #	mkdir -p $(OUT_ROOT)

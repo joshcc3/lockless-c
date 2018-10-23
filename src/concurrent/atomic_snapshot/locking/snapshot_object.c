@@ -85,6 +85,7 @@ void deinit_locking_ao(atomic_object *ao)
 
 void init_locking_ao(const int n, atomic_object *ao)
 {
+  ptr_obj_typeclass_witness.hash(ao, NULL);
   init_hash_map(&lock_pool, 64, &ptr_equals_typeclass_witness, &ptr_obj_typeclass_witness);
   pthread_mutex_t *mutex = (pthread_mutex_t*)malloc(sizeof(pthread_mutex_t));
   pthread_mutex_init(mutex, NULL);
