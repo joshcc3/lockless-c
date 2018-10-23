@@ -137,23 +137,6 @@ static void ao_update(atomic_object *ao, procid_t pid, int val)
   log_info("END UPDATE\0");
 }
 
-
-
-
-static void init_proc_local(int n, proc_local **procs)
-{
-  *procs = (proc_local*)malloc(sizeof(proc_local)*n);
-  assert(*procs);
-
-  const snapshot *snap;
-  init_snapshot(n, &snap);
-
-  for(int i = 0; i < n; i++) (*procs)[i] = (proc_local){ .val = 0, .seq = 0, .snap_base = snap };
-
-  assert(*procs);
-
-}
-
 void init_wait_free_ao(const int n, atomic_object *ao)
 {
   assert(n >= 1);

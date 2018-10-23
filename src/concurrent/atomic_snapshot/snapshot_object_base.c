@@ -17,6 +17,20 @@ void print_snap(int n, const snapshot* snap)
   log_info(buffer);
 }
 
+void init_proc_local(int n, proc_local **procs)
+{
+  *procs = (proc_local*)malloc(sizeof(proc_local)*n);
+  assert(*procs);
+
+  const snapshot *snap;
+  init_snapshot(n, &snap);
+
+  for(int i = 0; i < n; i++) (*procs)[i] = (proc_local){ .val = 0, .seq = 0, .snap_base = snap };
+
+  assert(*procs);
+
+}
+
 void init_snapshot(int n, const snapshot **res)
 {
   snapshot *tmp = (snapshot*)malloc(sizeof(snapshot)*n);

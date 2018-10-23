@@ -5,5 +5,6 @@
 
 void init_snapshot(int, const snapshot **);
 void init_snapshot_from_existing(int, proc_local *, const snapshot **);
+void init_proc_local(int, proc_local **);
 
 #endif

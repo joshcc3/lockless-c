@@ -8,6 +8,7 @@
 #include <time/sleep.h>
 #include <time/pprint.h>
 #include <log.h>
+#include "concurrent/atomic_snapshot/wait_free/unbounded_register/snapshot_object.h"
 #include "concurrent/atomic_snapshot/snapshot_object.h"
 
 void single_threaded_test()

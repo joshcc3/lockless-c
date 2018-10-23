@@ -9,7 +9,7 @@ OUT_ROOT := out
 
 COMPILER_CMD := $(COMPILER) $(COMPILER_FLAGS)
 
-source_files := $(shell cd src && find . -type d -name 'experiment' -prune -o -type f -name "*.c" -print)
+source_files := $(shell cd src && find concurrent -type d -name 'experiment' -prune -o -type f -name "*.c" -print)
 
 all: unbounded_regs
 
@@ -23,15 +23,24 @@ concurrent/atomic_snapshot/%.o: src/concurrent/atomic_snapshot/%.c
 	echo "case 2"
 	mkdir -p $(OUT_ROOT)/concurrent/atomic_snapshot
 	$(COMPILER_CMD) $(COMPILER_INCLUDES) -I$(SRC_DIR) $^ -c -o out/$@  $(COMPILER_LIBS)
+concurrent/atomic_snapshot/locking/%.o: src/concurrent/atomic_snapshot/locking/%.c
+	echo "case 2"
+	mkdir -p $(OUT_ROOT)/concurrent/atomic_snapshot/locking
+	$(COMPILER_CMD) $(COMPILER_INCLUDES) -I$(SRC_DIR) $^ -c -o out/$@  $(COMPILER_LIBS)
 
 concurrent/%.o: src/concurrent/%.c
 	echo "case 3"
 	mkdir -p $(OUT_ROOT)/concurrent
 	$(COMPILER_CMD) $(COMPILER_INCLUDES) -I$(SRC_DIR) $^ -c -o out/$@  $(COMPILER_LIBS)
 
-unbounded_regs: $(source_files:%.c=%.o)
+unbounded_regs: $(source_files:%.c=%.o) src/unbounded_regs.c
 	mkdir -p $(OUT_ROOT)
-	$(COMPILER_CMD)  $(COMPILER_INCLUDES) $(shell find out -type f -name "*.o")  -I$(SRC_DIR) -o out/unbounded_regs $(COMPILER_LIBS)
+	$(COMPILER_CMD)  $(COMPILER_INCLUDES) $(shell find out/concurrent -type f -name "*.o") src/unbounded_regs.c -I$(SRC_DIR) -o out/unbounded_regs $(COMPILER_LIBS)
+
+#locking: $(source_files:%.c=%.o)
+#	mkdir -p $(OUT_ROOT)
+#	$(COMPILER_CMD) $(COMP
+
 
 .PHONY clean:
 clean:

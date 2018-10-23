@@ -2,7 +2,7 @@
 #define TYPECLASSES_H
 
 #include <stdbool.h>
-typedef int hash_t;
+typedef unsigned long long hash_t;
 
 struct equals_typeclass {
     bool (*equal)(void const *, void const *, void const *);
@@ -15,6 +15,7 @@ struct obj_typeclass {
 };
 
 const struct equals_typeclass ptr_equals_typeclass_witness;
+const struct obj_typeclass ptr_obj_typeclass_witness;
 const struct equals_typeclass int_ptr_equals_typeclass;
 const struct obj_typeclass int_ptr_obj_typeclass;
 
