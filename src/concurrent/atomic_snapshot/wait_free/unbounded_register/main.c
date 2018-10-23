@@ -139,5 +139,5 @@ int main(int argc, char** argv)
 {
   if(argc < 3) { perror("Need <number of procs> <num iterations>\n"); return 0; }
   
-  multi_threaded_app(atoi(argv[2]), atoi(argv[3]));
+  multi_threaded_app(atoi(argv[1]), atoi(argv[2]));
 }
