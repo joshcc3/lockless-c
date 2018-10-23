@@ -159,11 +159,6 @@ We should compare this against a locking implementation
 The X-axis number of processes.
 The Y-axis:
  - Snapshot completion time (nanoseconds)
- - Update time
-
-Other interesting characteristics:
-X-axis number of processes
-Y-axis:
  - ratio of collects to snapshot attempts
  - time to collect
  - % of times when a snapshot ends with generating a new one
@@ -176,14 +171,15 @@ snapshot completion time - number of collects per snap attempt
 
 I ran some benchmarks with the following params:
 Num procs x Number of snaps [8, 16, 32, 40, 48, 64, 72, 80] x [100, 200, 400, 800, 1600].
+All of these are wall-clock measurements.
 Results are under `analysis/`. It also contains the notebook with graphs illustrating the relationship between the various parameters.
-From the graphs - the total execution time increases roughly linearly - as long as it's not competing with os for resources.
-Another (expected) observation is that the number of collects increases with the number of processes simulatneously snapping stuff. Every 80 new processes collecting, 1 more collect needs to be performed on average per snapshot.
+From the graphs - the total execution time increases roughly linearly - as long as it's not competing with os for resources. So although the worst case is O(n^2) it seems to be basically linear.
+Another (expected) observation is that the number of collects increases with the number of processes simultaneously snapping stuff. Every 80 new processes collecting, 1 more collect needs to be performed on average per snapshot.
 
-The collect time strangely doesn't increase linearly although it's basically a linear increase in the number of atomic loads and stores.
+The collect time increases slowly < 60 processes (an avg. of 3 micros more per collect per every 10 more processes) and then an avg of 10 micros per collect per every 10 more process from 60 - 80. This is because of an increased chance of collects interleaving. In reality since a collect is just an atomic load from the register of a process this should scale linearly with the number of processes.
+
 
 The number of Case A counts also for each initially increases and after about 60 simultaneous snappers processes it starts decreasing.
-
 
 ```
 # Example of interleaving for a double collect fail
