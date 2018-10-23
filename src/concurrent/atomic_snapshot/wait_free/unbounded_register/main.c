@@ -17,21 +17,21 @@ void single_threaded_test()
   init_ao(num_procs, &ao);
   
   const snapshot *snap1;
-  ao_snap(ao, 0, &snap1);
+  ao.snap(&ao, 0, &snap1);
 
   print_snap(num_procs, snap1);
 
-  ao_update(ao, 0, 123);
+  ao.update(&ao, 0, 123);
 
   const snapshot *snap2;
-  ao_snap(ao, 0, &snap2);
+  ao.snap(&ao, 0, &snap2);
   print_snap(num_procs, snap2);
 
 
-  ao_update(ao, 0, 321);
+  ao.update(&ao, 0, 321);
 
   const snapshot *snap3;
-  ao_snap(ao, 0, &snap3);
+  ao.snap(&ao, 0, &snap3);
   print_snap(num_procs, snap3);
   
 }
@@ -41,29 +41,29 @@ void single_threaded_multiple_processes()
   int num_procs = 5;
   atomic_object ao;
   init_ao(num_procs, &ao);
-  ao_update(ao, 0, 100);
-  ao_update(ao, 1, 200);
+  ao.update(&ao, 0, 100);
+  ao.update(&ao, 1, 200);
 
   const snapshot *s1;
-  ao_snap(ao, 1, &s1);
+  ao.snap(&ao, 1, &s1);
   print_snap(5, s1);
   print_snap(5, s1);
   print_snap(5, s1);    
   
-  ao_update(ao, 2, 300);
-  ao_update(ao, 3, 400);
-  ao_update(ao, 0, 101);
+  ao.update(&ao, 2, 300);
+  ao.update(&ao, 3, 400);
+  ao.update(&ao, 0, 101);
   
   const snapshot *s2;
-  ao_snap(ao, 2, &s2);
+  ao.snap(&ao, 2, &s2);
   print_snap(5, s2);
   
-  ao_update(ao, 4, 500);
-  ao_update(ao, 1, 201);
-  ao_update(ao, 2, 301);
+  ao.update(&ao, 4, 500);
+  ao.update(&ao, 1, 201);
+  ao.update(&ao, 2, 301);
   
   const snapshot *s3;
-  ao_snap(ao, 4, &s3);
+  ao.snap(&ao, 4, &s3);
   print_snap(5, s3);
 
 }
@@ -84,19 +84,19 @@ void* worker(void* args_)
   int pid = args->pid;
 
   const snapshot *initial_snap;
-  ao_snap(ao, pid, &initial_snap);
+  ao.snap(&ao, pid, &initial_snap);
   int acc = initial_snap->values[pid];
 
   for(int i = 0; i < args->iterations; i++)
     {
       acc += rand_in_range(100);
 
-      ao_update(*(args->obj), pid, acc);
+      ao.update(args->obj, pid, acc);
 
       if(i%args->checkpoint_count == 0)
 	{
 	  const snapshot *initial;
-	  ao_snap(ao, pid, &initial);
+	  ao.snap(&ao, pid, &initial);
 	  int total_count = 0;
 	  for(int j = 0; j < ao.num_procs; j++) total_count += initial->values[j];
 	}
@@ -110,6 +110,7 @@ void* worker(void* args_)
 void multi_threaded_app(int num, int iterations)
 {
   atomic_object ao;
+  printf("%d, %d\n", num, iterations);
   init_ao(num, &ao);
   pthread_t pids[num];
   for(int i = 0; i < num; i++)
@@ -126,7 +127,7 @@ void multi_threaded_app(int num, int iterations)
       exp_accum += *res;
     };
   /*const snapshot *snap_; // sanity check
-  ao_snap(ao, 0, &snap_);
+  ao.snap(&ao, 0, &snap_);
   int actual_accum = 0;
   for(int i = 0; i < num; i++) actual_accum += snap_->values[i];
   assert(exp_accum == actual_accum);*/
@@ -138,5 +139,5 @@ int main(int argc, char** argv)
 {
   if(argc < 3) { perror("Need <number of procs> <num iterations>\n"); return 0; }
   
-  multi_threaded_app(atoi(argv[1]), atoi(argv[2]));
+  multi_threaded_app(atoi(argv[2]), atoi(argv[3]));
 }

@@ -18,7 +18,7 @@ typedef struct log_entry_t {
 typedef log_entry_t* log_t;
 
 // use restrict qualified to vectorize the copying of proc local states
-void collect(atomic_object ao, procid_t pid, proc_local** s)
+static void collect(atomic_object ao, procid_t pid, proc_local** s)
 {
   log_info("COLLECT BEGIN\0");
   *s = (proc_local*)malloc(sizeof(proc_local) * ao.num_procs);
@@ -26,14 +26,14 @@ void collect(atomic_object ao, procid_t pid, proc_local** s)
   log_info("COLLECT END\0");
 }
 
-bool proc_state_differs(int n, proc_local* previous, proc_local* current)
+static bool proc_state_differs(int n, proc_local* previous, proc_local* current)
 {
   for(int i = 0; i < n; i++) if(previous[i].seq != current[i].seq) return true;
 
   return false;
 }
 
-int update_log(log_t log, int i, int new_seq)
+static int update_log(log_t log, int i, int new_seq)
 {
   if(log[i].seq_no != new_seq)
   {
@@ -43,7 +43,7 @@ int update_log(log_t log, int i, int new_seq)
   return log[i].count;
 }
 
-void init_snapshot(int n, const snapshot **res)
+static void init_snapshot(int n, const snapshot **res)
 {
   snapshot *tmp = (snapshot*)malloc(sizeof(snapshot)*n);
   const value *values = (value*)calloc(n, sizeof(value));
@@ -53,7 +53,7 @@ void init_snapshot(int n, const snapshot **res)
   *res = tmp;
 }
 
-void init_snapshot_from_existing(int n, proc_local *snapped_state, const snapshot **res)
+static void init_snapshot_from_existing(int n, proc_local *snapped_state, const snapshot **res)
 {
   
   init_snapshot(n, res);
@@ -77,7 +77,7 @@ void init_snapshot_from_existing(int n, proc_local *snapped_state, const snapsho
 }
 
 // This checks for 3 distinct values from a process and if it find it sets result
-bool update_and_check(int n, log_t log, const proc_local* c, const snapshot **result)
+static bool update_and_check(int n, log_t log, const proc_local* c, const snapshot **result)
 {
   assert(log && c && result);
   for(int i = 0; i < n; i++)
@@ -95,37 +95,37 @@ bool update_and_check(int n, log_t log, const proc_local* c, const snapshot **re
   return false;
 }
 
-void ao_snap(atomic_object ao, procid_t pid, const snapshot** snap)
+static void ao_snap(atomic_object *ao, procid_t pid, const snapshot** snap)
 {
   // Pre: valid args
   // Post: In the new snapshot, seq numbers must either have increased or values are unchanged
 
   log_info("START SNAP\0");
-  assert(ao.num_procs >= 1
+  assert(ao->num_procs >= 1
 	 && pid >= 0
-	 && pid < ao.num_procs
+	 && pid < ao->num_procs
 	 && snap);
-  for(int i = 0; i < ao.num_procs; i++) assert(ao.shared[i].seq >= 0);
+  for(int i = 0; i < ao->num_procs; i++) assert(ao->shared[i].seq >= 0);
 
-  const snapshot *old_snap = ao.shared[pid].snap_base;
+  const snapshot *old_snap = ao->shared[pid].snap_base;
 
-  log_t log = (log_t)calloc(ao.num_procs, sizeof(log_entry_t));
+  log_t log = (log_t)calloc(ao->num_procs, sizeof(log_entry_t));
   assert(log);
 
   proc_local *previous;
   proc_local *current;
-  collect(ao, pid, &previous);
-  collect(ao, pid, &current);
-  update_and_check(ao.num_procs, log, previous, snap);
-  update_and_check(ao.num_procs, log, current, snap); 
-  for(int i = 0; i < ITERATION_LIMIT(ao.num_procs); i++) {
-    if(proc_state_differs(ao.num_procs, previous, current))
+  collect(*ao, pid, &previous);
+  collect(*ao, pid, &current);
+  update_and_check(ao->num_procs, log, previous, snap);
+  update_and_check(ao->num_procs, log, current, snap); 
+  for(int i = 0; i < ITERATION_LIMIT(ao->num_procs); i++) {
+    if(proc_state_differs(ao->num_procs, previous, current))
     {
       log_info("DOUBLE COLLECT FAIL - %d\0", i + 1);
-      if(update_and_check(ao.num_procs, log, current, snap))
+      if(update_and_check(ao->num_procs, log, current, snap))
 	{
 	  log_info("CASE B - %d\0", i+1);
-	  for(int i = 0; i < ao.num_procs; i++) assert((*snap)->seqs[i] > old_snap->seqs[i] || ((*snap)->seqs[i] == old_snap->seqs[i] && (*snap)->values[i] == old_snap->values[i]));
+	  for(int i = 0; i < ao->num_procs; i++) assert((*snap)->seqs[i] > old_snap->seqs[i] || ((*snap)->seqs[i] == old_snap->seqs[i] && (*snap)->values[i] == old_snap->values[i]));
 	  break;
 	}
     }
@@ -133,27 +133,27 @@ void ao_snap(atomic_object ao, procid_t pid, const snapshot** snap)
       {
 	// double collection - there was a valid snapshot
 	log_info("CASE A - %d\0", i + 1);
-	init_snapshot_from_existing(ao.num_procs, current, snap);
+	init_snapshot_from_existing(ao->num_procs, current, snap);
 	assert((*snap)->seqs[i] > old_snap->seqs[i] || ((*snap)->seqs[i] == old_snap->seqs[i] && (*snap)->values[i] == old_snap->values[i]));
 	break;
       }
     free(previous);
     previous = current;
-    collect(ao, pid, &current);
+    collect(*ao, pid, &current);
 
   }
   log_info("END SNAP\0");
 }
 
 
-void ao_update(atomic_object ao, procid_t pid, int val)
+static void ao_update(atomic_object *ao, procid_t pid, int val)
 {
   log_info("START UPDATE\0");
-  assert(ao.num_procs >= 1
+  assert(ao->num_procs >= 1
 	 && pid >= 0
-	 && pid < ao.num_procs
-	 && ao.shared[0].seq >= 0);
-  int prev_seq = ao.shared[pid].seq;
+	 && pid < ao->num_procs
+	 && ao->shared[0].seq >= 0);
+  int prev_seq = ao->shared[pid].seq;
  
   const snapshot *snap;
   ao_snap(ao, pid, &snap);
@@ -164,22 +164,12 @@ void ao_update(atomic_object ao, procid_t pid, int val)
   tmp[1] = prev_seq + 1;
   *(const snapshot**)(tmp + 2) = snap;
 
-  atomic_store(&new_proc_local, (__int128_t*)(ao.shared + pid));
+  atomic_store(&new_proc_local, (__int128_t*)(ao->shared + pid));
 
-  assert(ao.shared[pid].val == val && ao.shared[pid].seq == prev_seq + 1);
+  assert(ao->shared[pid].val == val && ao->shared[pid].seq == prev_seq + 1);
   log_info("END UPDATE\0");
 }
 
-void print_snap(int n, const snapshot* snap)
-{
-  char buffer[2048];
-  for(int i = 0; i < n - 1; i++)
-    {
-      sprintf(buffer, "%s(%d, %d), ", buffer, snap->values[i], snap->seqs[i]);
-    }
-  sprintf(buffer, "%s(%d, %d)\0", buffer, snap->values[n-1], snap->seqs[n-1]);
-  log_info(buffer);
-}
 
 
 
@@ -206,7 +196,22 @@ void init_ao(const int n, atomic_object *ao)
   proc_local *procs;
   init_proc_local(ao->num_procs, &procs);
   ao->shared = procs;
+  ao->update = ao_update;
+  ao->snap = ao_snap;
 
   // check that procs was inited and that the value in the snap that n-1 has for n-1 matches what it stores locally
   assert(procs && procs[n-1].seq == 0 && procs[n-1].val == procs[n-1].snap_base->values[n-1]);
+
+
+}
+
+void print_snap(int n, const snapshot* snap)
+{
+  char buffer[2048];
+  for(int i = 0; i < n - 1; i++)
+    {
+      sprintf(buffer, "%s(%d, %d), ", buffer, snap->values[i], snap->seqs[i]);
+    }
+  sprintf(buffer, "%s(%d, %d)\0", buffer, snap->values[n-1], snap->seqs[n-1]);
+  log_info(buffer);
 }
