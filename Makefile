@@ -3,7 +3,7 @@ COMPILER_LIBS :=  -Llibs -ljc -lpthread -lm -latomic
 COMPILER_INCLUDES := -Iinclude
 COMPILER := gcc
 SRC_DIR :=  src
-APP_NAME := concurrent/wait_free/atomic_snapshot/unbounded_register
+APP_NAME := concurrent/atomic_snapshot/wait_free/unbounded_register/
 LIB_ROOT := $(SRC_DIR)/$(APP_NAME)
 OUT_ROOT := out
 
