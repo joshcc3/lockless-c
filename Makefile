@@ -37,6 +37,10 @@ unbounded_regs: $(source_files:%.c=%.o) src/unbounded_regs.c
 	mkdir -p $(OUT_ROOT)
 	$(COMPILER_CMD)  $(COMPILER_INCLUDES) $(shell find out/concurrent -type f -name "*.o") src/unbounded_regs.c -I$(SRC_DIR) -o out/unbounded_regs $(COMPILER_LIBS)
 
+locking: $(source_files:%.c=%.o) src/locking.c
+	mkdir -p $(OUT_ROOT)
+	$(COMPILER_CMD)  $(COMPILER_INCLUDES) $(shell find out/concurrent -type f -name "*.o") src/locking.c -I$(SRC_DIR) -o out/locking $(COMPILER_LIBS)
+
 #locking: $(source_files:%.c=%.o)
 #	mkdir -p $(OUT_ROOT)
 #	$(COMPILER_CMD) $(COMP
