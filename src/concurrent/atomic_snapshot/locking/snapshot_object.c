@@ -91,6 +91,12 @@ void init_locking_ao(const int n, atomic_object *ao)
   pthread_mutex_init(mutex, NULL);
   hash_map_put(&lock_pool, (void*)ao, (void*)mutex);
 
+  pthread_mutex_t *mutex2;
+  hash_map_get(lock_pool, ao, (const void**)&mutex2);
+  assert(mutex2 == mutex);
+  pthread_mutex_lock(mutex2);
+  pthread_mutex_unlock(mutex2);  
+
   proc_local *procs;
   init_proc_local(n, &procs);
   ao->shared = procs;
