@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <stdbool.h>
-#include "snapshot_object.h"
+#include "concurrent/atomic_snapshot/wait_free/unbounded_register/snapshot_object.h"
 #include "concurrent/atomic.h"
 #include <log.h>
 
@@ -41,39 +41,6 @@ static int update_log(log_t log, int i, int new_seq)
       log[i].seq_no = new_seq;
   }
   return log[i].count;
-}
-
-static void init_snapshot(int n, const snapshot **res)
-{
-  snapshot *tmp = (snapshot*)malloc(sizeof(snapshot)*n);
-  const value *values = (value*)calloc(n, sizeof(value));
-  const seq_t *seqs = (seq_t*)calloc(n, sizeof(seq_t));
-  tmp->values = values;
-  tmp->seqs = seqs;
-  *res = tmp;
-}
-
-static void init_snapshot_from_existing(int n, proc_local *snapped_state, const snapshot **res)
-{
-  
-  init_snapshot(n, res);
-  assert(*res);
-
-  snapshot *new_snap = (snapshot*)*res;
-  
-  value* tmp_values = (value*)malloc(n*sizeof(value));
-  seq_t* tmp_seqs = (seq_t*)malloc(n*sizeof(seq_t));
-
-  for(int i = 0; i < n; i++)
-    {
-      proc_local tmp;
-      atomic_load((__int128_t*)&tmp, (__int128_t*)(snapped_state + i));
-      tmp_values[i] = tmp.val;
-      tmp_seqs[i] = tmp.seq;
-    }
-  new_snap->values = tmp_values;
-  new_snap->seqs = tmp_seqs;
-  assert(*res);
 }
 
 // This checks for 3 distinct values from a process and if it find it sets result
@@ -187,7 +154,7 @@ static void init_proc_local(int n, proc_local **procs)
 
 }
 
-void init_ao(const int n, atomic_object *ao)
+void init_wait_free_ao(const int n, atomic_object *ao)
 {
   assert(n >= 1);
 
@@ -203,15 +170,4 @@ void init_ao(const int n, atomic_object *ao)
   assert(procs && procs[n-1].seq == 0 && procs[n-1].val == procs[n-1].snap_base->values[n-1]);
 
 
-}
-
-void print_snap(int n, const snapshot* snap)
-{
-  char buffer[2048];
-  for(int i = 0; i < n - 1; i++)
-    {
-      sprintf(buffer, "%s(%d, %d), ", buffer, snap->values[i], snap->seqs[i]);
-    }
-  sprintf(buffer, "%s(%d, %d)\0", buffer, snap->values[n-1], snap->seqs[n-1]);
-  log_info(buffer);
 }

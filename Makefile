@@ -15,16 +15,21 @@ all: unbounded_regs
 
 
 $(APP_NAME)/%.o: src/$(APP_NAME)/%.c
+	echo "case 1"
 	mkdir -p $(OUT_ROOT)/$(APP_NAME)
 	$(COMPILER_CMD) $(COMPILER_INCLUDES) -I$(SRC_DIR) $^ -c -o out/$@ $(COMPILER_LIBS)
 
+concurrent/atomic_snapshot/%.o: src/concurrent/atomic_snapshot/%.c
+	echo "case 2"
+	mkdir -p $(OUT_ROOT)/concurrent/atomic_snapshot
+	$(COMPILER_CMD) $(COMPILER_INCLUDES) -I$(SRC_DIR) $^ -c -o out/$@  $(COMPILER_LIBS)
+
 concurrent/%.o: src/concurrent/%.c
-	echo $(source_files)
+	echo "case 3"
 	mkdir -p $(OUT_ROOT)/concurrent
 	$(COMPILER_CMD) $(COMPILER_INCLUDES) -I$(SRC_DIR) $^ -c -o out/$@  $(COMPILER_LIBS)
 
 unbounded_regs: $(source_files:%.c=%.o)
-	echo $^
 	mkdir -p $(OUT_ROOT)
 	$(COMPILER_CMD)  $(COMPILER_INCLUDES) $(shell find out -type f -name "*.o")  -I$(SRC_DIR) -o out/unbounded_regs $(COMPILER_LIBS)
 

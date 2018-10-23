@@ -8,13 +8,13 @@
 #include <time/sleep.h>
 #include <time/pprint.h>
 #include <log.h>
-#include "snapshot_object.h"
+#include "concurrent/atomic_snapshot/snapshot_object.h"
 
 void single_threaded_test()
 {
   int num_procs = 1;
   atomic_object ao;
-  init_ao(num_procs, &ao);
+  init_wait_free_ao(num_procs, &ao);
   
   const snapshot *snap1;
   ao.snap(&ao, 0, &snap1);
@@ -40,7 +40,7 @@ void single_threaded_multiple_processes()
 {
   int num_procs = 5;
   atomic_object ao;
-  init_ao(num_procs, &ao);
+  init_wait_free_ao(num_procs, &ao);
   ao.update(&ao, 0, 100);
   ao.update(&ao, 1, 200);
 
@@ -111,7 +111,7 @@ void multi_threaded_app(int num, int iterations)
 {
   atomic_object ao;
   printf("%d, %d\n", num, iterations);
-  init_ao(num, &ao);
+  init_wait_free_ao(num, &ao);
   pthread_t pids[num];
   for(int i = 0; i < num; i++)
     {
