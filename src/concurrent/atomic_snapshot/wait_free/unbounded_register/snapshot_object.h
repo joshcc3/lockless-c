@@ -21,14 +21,13 @@ typedef struct proc_local proc_local;
 typedef struct atomic_object {
   proc_local * shared;
   int num_procs;
+  void (*init)(int, atomic_object*);
+  void (*deinit)(int, atomic_object*);  
+
+  void (*ao_update)(atomic_object*, procid_t, value);
+  void (*ao_snap)(atomic_object, procid_t, const snapshot**);
+  void (*print_snap)(int, const snapshot*);
+  
 } atomic_object;
-
-
-void init_ao(int, atomic_object*);
-
-void ao_update(atomic_object, procid_t, value);
-void ao_snap(atomic_object, procid_t, const snapshot**);
-
-void print_snap(int, const snapshot*);
 
 #endif
